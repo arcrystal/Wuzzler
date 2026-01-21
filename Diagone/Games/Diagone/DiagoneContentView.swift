@@ -379,8 +379,8 @@ struct DiagoneContentView: View {
             sum += effectiveSpanFactor(L)
         }
         sum += spanFactor(5)  // Full span for last chip
-        // Add a small buffer (15%) to ensure comfortable fit
-        return sum * 1.15
+        // Add a buffer (20%) to ensure comfortable fit
+        return sum * 1.2
     }
 
     /// Computes cellSize that makes all chips fit exactly in availableWidth.
