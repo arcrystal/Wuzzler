@@ -1,8 +1,7 @@
 {
-  "01/16/2026": {
+  "01/21/2026": {
     "words": [
       {
-        "scrambled": "DYTIZ",
         "solution": "DITZY",
         "shadedIndices": [2]
       },
@@ -12,12 +11,10 @@
         "shadedIndices": [4, 5]
       },
       {
-        "scrambled": "XEPPELR",
         "solution": "PERPLEX",
         "shadedIndices": [2, 5]
       },
       {
-        "scrambled": "AJIMYTOR",
         "solution": "MAJORITY",
         "shadedIndices": [1, 5, 7]
       }

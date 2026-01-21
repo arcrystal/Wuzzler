@@ -1,5 +1,5 @@
 {
-    "01/16/2026": {
+    "01/21/2026": {
         "letters": ["D", "EEE", "EIIII", "LMMMMMT"],
         "solutions": ["DIME", "LIME", "MIME", "TIME"]
       },
@@ -474,5 +474,5 @@
     "05/30/2026": {
         "letters": ["A", "ABC", "DDDDE", "EEEEELW"],
         "solutions": ["BEAD", "CEDE", "LEAD", "WEED"]
-      },
+      }
 }

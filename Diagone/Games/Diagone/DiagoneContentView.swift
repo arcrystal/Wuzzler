@@ -61,7 +61,6 @@ struct DiagoneContentView: View {
                                 .frame(maxWidth: .infinity)
                             // Chip selection pane
                             chipPane(width: width)
-                                .padding(.horizontal)
                             // Main diagonal input (shown only when all pieces placed)
                             if viewModel.showMainInput {
                                 MainDiagonalInputView(input: $viewModel.mainInput, cellSize: computeChipCellSize(totalWidth: width))
@@ -327,104 +326,161 @@ struct DiagoneContentView: View {
         .background(Color.boardCell.opacity(0.2).ignoresSafeArea())
     }
 
-    // MARK: - Chip Pane
+    // MARK: - Chip Pane Layout
+    //
+    // Displays two rows of diagonal word chips (lengths 1-5).
+    // Simple layout: all chips in a row with small gaps, vertically centered.
+    // Math is straightforward and guaranteed to fit.
 
-    /// Constant gap between chips in the pane
-    private var chipGap: CGFloat { 4 }
+    /// Horizontal margin on each side of the chip pane
+    private let chipPaneMargin: CGFloat = 8
 
-    /// Fixed horizontal margin for chip pane (equal on both sides)
-    private var chipPaneMargin: CGFloat { 20 }
+    /// Gap between adjacent chips (in points)
+    private let chipGap: CGFloat = 1.5
 
-    /// Calculates the span (width/height) for a chip of given length
-    private func chipSpan(length: Int, cellSize: CGFloat) -> CGFloat {
-        let tileSize = cellSize * 0.85
-        let step = tileSize * 0.72
-        return step * CGFloat(length - 1) + tileSize
+    /// Tile size as fraction of cellSize (must match ChipView)
+    private let tileFactor: CGFloat = 0.85
+
+    /// Step between diagonal tiles as fraction of tileSize (must match ChipView)
+    private let stepFactor: CGFloat = 0.72
+
+    // MARK: - Layout Calculation
+
+    /// Computes the span factor for a chip of given length.
+    /// span = cellSize * spanFactor(length)
+    private func spanFactor(_ length: Int) -> CGFloat {
+        // span(L) = (L-1) * step + tileSize
+        //         = (L-1) * stepFactor * tileFactor * cellSize + tileFactor * cellSize
+        //         = tileFactor * cellSize * (1 + stepFactor * (L-1))
+        return tileFactor * (1 + stepFactor * CGFloat(length - 1))
     }
 
-    /// Calculates the vertical offset to align visual centers of diagonal chips.
-    /// The visual center of a diagonal is at the middle tile (or midpoint between middle tiles).
-    /// For length n, visual center Y = (n-1)/2 * step + tileSize/2
-    /// To align all to the 5-tile center, offset = (5 - n) * step / 2
-    private func chipVerticalOffset(length: Int, cellSize: CGFloat) -> CGFloat {
-        let tileSize = cellSize * 0.85
-        let step = tileSize * 0.72
-        return CGFloat(5 - length) * step / 2
-    }
-
-    /// Calculates cell size for chips based on available width.
-    /// Uses proportional spacing where each chip takes space based on its actual size.
-    private func computeChipCellSize(totalWidth: CGFloat) -> CGFloat {
-        // Sum of span factors for lengths 1-5:
-        // span(n) = tileSize * (1 + 0.72 * (n-1)) where tileSize = cellSize * 0.85
-        // Total factor = 0.85 * (1 + 1.72 + 2.44 + 3.16 + 3.88) = 0.85 * 12.2 ≈ 10.37
-        let tileFactor: CGFloat = 0.85
-        let stepFactor: CGFloat = 0.72
-        var totalSpanFactor: CGFloat = 0
-        for length in 1...5 {
-            totalSpanFactor += tileFactor * (1 + stepFactor * CGFloat(length - 1))
+    /// Effective span factor for positioning: for chips with 2+ letters,
+    /// we measure to the right edge of the 2nd letter (not the last letter)
+    private func effectiveSpanFactor(_ length: Int) -> CGFloat {
+        if length == 1 {
+            // Only 1 letter, so edge is at tileSize
+            return tileFactor
+        } else {
+            // Measure to right edge of 2nd letter: step + tileSize
+            // = tileFactor * stepFactor * cellSize + tileFactor * cellSize
+            // = tileFactor * (1 + stepFactor) * cellSize
+            return tileFactor * (1 + stepFactor)
         }
-        // Available width = total width minus equal margins on both sides minus gaps between chips
-        let availableWidth = totalWidth - (2 * chipPaneMargin) - (4 * chipGap)
-        return availableWidth / totalSpanFactor
     }
+
+    /// Total width factor: sum of effective spans for chips 1-4, plus FULL span for chip 5
+    /// This ensures the rightmost edge of chip 5 fits within availableWidth
+    private var totalWidthFactor: CGFloat {
+        // Chips 1-4 use effective span for positioning
+        // Chip 5 uses full span since it's the last one and must fit entirely
+        var sum: CGFloat = 0
+        for L in 1...4 {
+            sum += effectiveSpanFactor(L)
+        }
+        sum += spanFactor(5)  // Full span for last chip
+        // Add a small buffer (15%) to ensure comfortable fit
+        return sum * 1.15
+    }
+
+    /// Computes cellSize that makes all chips fit exactly in availableWidth.
+    private func computeCellSize(availableWidth: CGFloat) -> CGFloat {
+        let totalGaps = 4 * chipGap  // 4 gaps between 5 chips
+        return (availableWidth - totalGaps) / totalWidthFactor
+    }
+
+    /// Actual span (width = height) for a chip of given length (full size)
+    private func chipSpan(_ length: Int, cellSize: CGFloat) -> CGFloat {
+        return cellSize * spanFactor(length)
+    }
+
+    /// Effective span used for positioning (to 2nd letter for chips with 2+ letters)
+    private func effectiveSpan(_ length: Int, cellSize: CGFloat) -> CGFloat {
+        return cellSize * effectiveSpanFactor(length)
+    }
+
+    /// Computes x-positions for all 5 chips, given cellSize
+    /// Gap is measured from 2nd letter of current chip to 1st letter of next chip
+    private func computeXPositions(cellSize: CGFloat) -> [CGFloat] {
+        var positions: [CGFloat] = []
+        var x: CGFloat = 0
+        for L in 1...5 {
+            positions.append(x)
+            // Advance by effective span (to 2nd letter for L>=2, or to end for L=1)
+            x += effectiveSpan(L, cellSize: cellSize)
+            if L < 5 {
+                x += chipGap
+            }
+        }
+        return positions
+    }
+
+    /// Computes vertical offset to center a chip within the row height
+    private func chipYOffset(_ length: Int, cellSize: CGFloat, maxSpan: CGFloat) -> CGFloat {
+        let span = chipSpan(length, cellSize: cellSize)
+        return (maxSpan - span) / 2
+    }
+
+    // MARK: - Chip Pane View
 
     @ViewBuilder
     private func chipPane(width: CGFloat) -> some View {
-        let cellSize = computeChipCellSize(totalWidth: width)
+        let availableWidth = width - 2 * chipPaneMargin
+        let cellSize = computeCellSize(availableWidth: availableWidth)
+        let xPositions = computeXPositions(cellSize: cellSize)
+        let maxSpan = chipSpan(5, cellSize: cellSize)  // Height of tallest chip
 
-        // Max height is the 5-letter chip span
-        let maxChipHeight = chipSpan(length: 5, cellSize: cellSize)
-
-        // Prepare rows: for each length 1...5, take first chip and second chip
+        // Group pieces by length
         let groups = Dictionary(grouping: viewModel.engine.state.pieces, by: \.length)
-        let sorted = { (xs: [GamePiece]) in
-            xs.sorted { lhs, rhs in
+        let sortById = { (pieces: [GamePiece]) in
+            pieces.sorted { lhs, rhs in
                 let li = Int(lhs.id.drop(while: { !$0.isNumber })) ?? 0
                 let ri = Int(rhs.id.drop(while: { !$0.isNumber })) ?? 0
                 return li < ri
             }
         }
-        let row1Opt: [GamePiece?] = (1...5).map { groups[$0].map(sorted)?.first }
-        let row2Opt: [GamePiece?] = (1...5).map { groups[$0].map(sorted)?.dropFirst().first }
+
+        // Row 1: first piece of each length, Row 2: second piece of each length
+        let row1: [GamePiece?] = (1...5).map { groups[$0].map(sortById)?.first }
+        let row2: [GamePiece?] = (1...5).map { groups[$0].map(sortById)?.dropFirst().first }
 
         VStack(spacing: 8) {
-            // Row 1: chips aligned by visual center of diagonal
-            HStack(alignment: .top, spacing: chipGap) {
-                ForEach(0..<5, id: \.self) { i in
-                    let length = i + 1
-                    let span = chipSpan(length: length, cellSize: cellSize)
-                    let vOffset = chipVerticalOffset(length: length, cellSize: cellSize)
-                    if let p = row1Opt[i] {
-                        ChipView(piece: p, cellSize: cellSize, hidden: !viewModel.started)
-                            .frame(width: span, height: span, alignment: .topLeading)
-                            .padding(.top, vOffset)
-                            .frame(height: maxChipHeight, alignment: .top)
-                    } else {
-                        Color.clear
-                            .frame(width: span, height: maxChipHeight)
-                    }
-                }
-            }
-            // Row 2: same layout
-            HStack(alignment: .top, spacing: chipGap) {
-                ForEach(0..<5, id: \.self) { i in
-                    let length = i + 1
-                    let span = chipSpan(length: length, cellSize: cellSize)
-                    let vOffset = chipVerticalOffset(length: length, cellSize: cellSize)
-                    if let p = row2Opt[i] {
-                        ChipView(piece: p, cellSize: cellSize, hidden: !viewModel.started)
-                            .frame(width: span, height: span, alignment: .topLeading)
-                            .padding(.top, vOffset)
-                            .frame(height: maxChipHeight, alignment: .top)
-                    } else {
-                        Color.clear
-                            .frame(width: span, height: maxChipHeight)
-                    }
+            chipRow(pieces: row1, cellSize: cellSize, xPositions: xPositions,
+                    maxSpan: maxSpan, rowWidth: availableWidth)
+            chipRow(pieces: row2, cellSize: cellSize, xPositions: xPositions,
+                    maxSpan: maxSpan, rowWidth: availableWidth)
+        }
+        .frame(width: availableWidth)
+    }
+
+    @ViewBuilder
+    private func chipRow(
+        pieces: [GamePiece?],
+        cellSize: CGFloat,
+        xPositions: [CGFloat],
+        maxSpan: CGFloat,
+        rowWidth: CGFloat
+    ) -> some View {
+        ZStack(alignment: .topLeading) {
+            ForEach(0..<5, id: \.self) { i in
+                let length = i + 1
+                let span = chipSpan(length, cellSize: cellSize)
+                let xPos = xPositions[i]
+                let yPos = chipYOffset(length, cellSize: cellSize, maxSpan: maxSpan)
+
+                if let piece = pieces[i] {
+                    ChipView(piece: piece, cellSize: cellSize, hidden: !viewModel.started)
+                        .frame(width: span, height: span, alignment: .topLeading)
+                        .offset(x: xPos, y: yPos)
                 }
             }
         }
-        .padding(.horizontal, chipPaneMargin)
+        .frame(width: rowWidth, height: maxSpan, alignment: .topLeading)
+    }
+
+    /// Helper to compute cellSize for the MainDiagonalInputView
+    private func computeChipCellSize(totalWidth: CGFloat) -> CGFloat {
+        return computeCellSize(availableWidth: totalWidth - 2 * chipPaneMargin)
     }
 
 
