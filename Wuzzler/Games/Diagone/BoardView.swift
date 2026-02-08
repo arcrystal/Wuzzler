@@ -180,6 +180,7 @@ fileprivate struct DropTargetOverlay: View {
     let target: GameTarget
     let cellSize: CGFloat
     @EnvironmentObject var viewModel: GameViewModel
+    @State private var isDragging = false
 
     var body: some View {
         // Calculate bounding box for the diagonal. All diagonals run from top‑left
@@ -212,9 +213,28 @@ fileprivate struct DropTargetOverlay: View {
             }())
             .zIndex(10)
             .highPriorityGesture(
-                TapGesture().onEnded {
-                    viewModel.handleTap(on: target.id)
-                }
+                DragGesture(minimumDistance: 0, coordinateSpace: .global)
+                    .onChanged { value in
+                        if isDragging {
+                            viewModel.updateDrag(globalLocation: value.location)
+                            return
+                        }
+                        guard target.pieceId != nil else { return }
+                        let distance = sqrt(pow(value.translation.width, 2) + pow(value.translation.height, 2))
+                        if distance > 10 {
+                            isDragging = true
+                            viewModel.beginDraggingFromBoard(targetId: target.id)
+                            viewModel.updateDrag(globalLocation: value.location)
+                        }
+                    }
+                    .onEnded { _ in
+                        if isDragging {
+                            viewModel.finishDrag()
+                            isDragging = false
+                        } else if target.pieceId != nil {
+                            viewModel.handleTap(on: target.id)
+                        }
+                    }
             )
     }
 }

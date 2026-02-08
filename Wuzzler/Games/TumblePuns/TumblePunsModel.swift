@@ -103,8 +103,12 @@ class TumblePunsEngine {
 
     func appendLetter(_ letter: String) {
         if state.isFinalAnswerSelected {
+            let maxLength = puzzle.answerPattern.filter({ $0 == "_" }).count
+            guard state.finalAnswer.count < maxLength else { return }
             state.appendLetterToFinal(letter)
         } else if let index = state.selectedWordIndex {
+            let maxLength = puzzle.words[index].solution.count
+            guard state.wordAnswers[index].count < maxLength else { return }
             state.appendLetter(letter, to: index)
         }
     }

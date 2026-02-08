@@ -125,10 +125,30 @@ public final class RhymeAGramsViewModel: ObservableObject {
         engine.appendLetter(key)
         answers = engine.state.answers
         debouncedSave()
+        // Auto-advance to next unfilled slot when current word is full
+        if answers[selectedSlot].count >= 4 {
+            for i in 1...3 {
+                let next = (selectedSlot + i) % 4
+                if answers[next].count < 4 {
+                    selectSlot(next)
+                    break
+                }
+            }
+        }
         checkSolved()
     }
 
     public func deleteKey() {
+        // If current slot is empty, move to the previous non-empty slot
+        if answers[selectedSlot].isEmpty {
+            for i in 1...3 {
+                let prev = (selectedSlot - i + 4) % 4
+                if !answers[prev].isEmpty {
+                    selectSlot(prev)
+                    break
+                }
+            }
+        }
         engine.deleteLetter()
         answers = engine.state.answers
         debouncedSave()
@@ -199,6 +219,31 @@ public final class RhymeAGramsViewModel: ObservableObject {
 
     public var puzzle: RhymeAGramsPuzzle {
         return engine.puzzle
+    }
+
+    /// Returns a grid of bools matching the pyramid shape indicating which
+    /// letter positions are consumed by the current answers.
+    public var usedPyramidPositions: [[Bool]] {
+        var counts: [Character: Int] = [:]
+        for answer in answers {
+            for ch in answer {
+                counts[ch, default: 0] += 1
+            }
+        }
+        var result: [[Bool]] = []
+        for row in puzzle.letters {
+            var rowResult: [Bool] = []
+            for ch in row {
+                if let c = counts[ch], c > 0 {
+                    counts[ch] = c - 1
+                    rowResult.append(true)
+                } else {
+                    rowResult.append(false)
+                }
+            }
+            result.append(rowResult)
+        }
+        return result
     }
 
     // MARK: - Persistence

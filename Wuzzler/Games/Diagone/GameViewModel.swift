@@ -49,6 +49,10 @@ public final class GameViewModel: ObservableObject {
     /// calculate which diagonal the user is hovering over.
     @Published public var dragGlobalLocation: CGPoint? = nil
 
+    /// The target from which a piece is being dragged (for board-to-board moves).
+    /// When non-nil, indicates the drag originated from the board rather than the pane.
+    @Published public var dragSourceTargetId: String? = nil
+
     /// The frame of the board in global coordinates. This is set by the
     /// `BoardView` via a `GeometryReader` so that drag positions can be
     /// converted into board space when determining hover state. It will be
@@ -394,6 +398,8 @@ public final class GameViewModel: ObservableObject {
         let empty = Array(repeating: "", count: count)
         // Keep the UI text fields in sync so the board is no longer considered "full".
         mainInput = empty
+        // Hide the main input since the board is no longer complete.
+        showMainInput = false
         // Use the engine API to clear the diagonal (handles undo/redo and recomputeBoard).
         engine.setMainDiagonal(empty)
         saveState()
@@ -435,6 +441,7 @@ public final class GameViewModel: ObservableObject {
     /// be known (non‑zero) for this method to operate.
     @MainActor
     public func updateDrag(globalLocation: CGPoint) {
+        dragGlobalLocation = globalLocation
         guard !finished, let pid = draggingPieceId, boardFrameGlobal != .zero else {
             dragHoverTargetId = nil; return
         }
@@ -499,25 +506,68 @@ public final class GameViewModel: ObservableObject {
     @MainActor
     public func finishDrag() {
         guard !finished else { return }
-        defer { draggingPieceId = nil; dragHoverTargetId = nil }
-        guard let pid = draggingPieceId, let tid = dragHoverTargetId else { return }
-
-        let (success, replacedId) = engine.placeOrReplace(pieceId: pid, on: tid)
-        if success {
-            // Newly placed chip should appear inactive in the pane
-            fadingPanePieceIds.insert(pid)
-            // The replaced chip (if any) returns to the pane; restore its interactivity
-            if let rid = replacedId { fadingPanePieceIds.remove(rid) }
-
-            if engine.state.targets.allSatisfy({ $0.pieceId != nil }) {
-                withAnimation { showMainInput = true }
-            }
-            saveState()
-            maybeHandleCompletionState()
-        } else {
-            let generator = UINotificationFeedbackGenerator()
-            generator.notificationOccurred(.error)
+        let sourceTarget = dragSourceTargetId
+        defer {
+            draggingPieceId = nil
+            dragHoverTargetId = nil
+            dragSourceTargetId = nil
+            dragGlobalLocation = nil
         }
+        guard let pid = draggingPieceId else { return }
+
+        if let tid = dragHoverTargetId {
+            let (success, replacedId) = engine.placeOrReplace(pieceId: pid, on: tid)
+            if success {
+                // Newly placed chip should appear inactive in the pane
+                fadingPanePieceIds.insert(pid)
+                // The replaced chip (if any) returns to the pane; restore its interactivity
+                if let rid = replacedId { fadingPanePieceIds.remove(rid) }
+
+                if engine.state.targets.allSatisfy({ $0.pieceId != nil }) {
+                    withAnimation { showMainInput = true }
+                }
+                saveState()
+                maybeHandleCompletionState()
+                return
+            }
+        }
+
+        // Drop failed or no target — if dragged from the board, return to source
+        if let src = sourceTarget {
+            let (ok, _) = engine.placeOrReplace(pieceId: pid, on: src)
+            if ok {
+                fadingPanePieceIds.insert(pid)
+                if engine.state.targets.allSatisfy({ $0.pieceId != nil }) {
+                    withAnimation { showMainInput = true }
+                }
+                saveState()
+            } else {
+                // Shouldn't happen, but fail gracefully — return to pane
+                fadingPanePieceIds.remove(pid)
+            }
+        }
+        // If from pane and no target, ChipView handles snap-back visually
+    }
+
+    /// Begins dragging a piece that is already placed on the board.
+    @MainActor
+    public func beginDraggingFromBoard(targetId: String) {
+        guard !finished else { return }
+        guard let target = engine.state.targets.first(where: { $0.id == targetId }),
+              let pieceId = target.pieceId else { return }
+
+        dragSourceTargetId = targetId
+        draggingPieceId = pieceId
+        dragHoverTargetId = nil
+
+        // Remove piece from board via engine
+        _ = engine.removePiece(from: targetId)
+
+        // Keep the chip marked as inactive in the pane (it's being dragged, not returned)
+        fadingPanePieceIds.insert(pieceId)
+
+        // Clear main diagonal since board is now incomplete
+        clearMainDiagonal()
     }
 
     /// Convenience for views to check whether a pane chip should be faded/disabled.

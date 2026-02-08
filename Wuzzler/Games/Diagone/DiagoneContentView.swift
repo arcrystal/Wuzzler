@@ -29,7 +29,8 @@ struct DiagoneContentView: View {
     @State private var winHighlightTimer: Timer? = nil
 
     @State private var showHub: Bool = true
-
+    /// Random row assignment for chip pairs: true = first-by-id in row 1, false = swapped
+    @State private var chipRowAssignment: [Bool] = (0..<5).map { _ in Bool.random() }
 
     private enum HubMode { case notStarted, inProgress, completed }
     private var hubMode: HubMode {
@@ -59,10 +60,14 @@ struct DiagoneContentView: View {
                                 .environmentObject(viewModel)
                                 .padding(.horizontal)
                                 .frame(maxWidth: .infinity)
-                            // Chip selection pane
-                            chipPane(width: width)
+                            // Chip selection pane (hidden when all pieces placed or game finished)
+                            if !viewModel.showMainInput && !viewModel.finished {
+                                chipPane(width: width)
+                                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                            }
                             // Keyboard (shown only when all pieces placed and not finished)
                             if viewModel.showMainInput && !viewModel.finished {
+                                Spacer().frame(maxHeight: 40)
                                 KeyboardView(
                                     onKeyTap: { key in
                                         viewModel.typeKey(key)
@@ -72,15 +77,59 @@ struct DiagoneContentView: View {
                                     }
                                 )
                                 .padding(.horizontal)
+                                .transition(.move(edge: .bottom).combined(with: .opacity))
                             }
                         }
                         .padding(.vertical)
+                        .animation(.easeInOut(duration: 0.3), value: viewModel.showMainInput)
                     }
                     .background(Color.boardCell.opacity(0.2).ignoresSafeArea())
                     // Trigger row highlight animation whenever the solved flag becomes true
                     .onChange(of: viewModel.isSolved, initial: false) { oldValue, newValue in
                         if newValue {
                             startRowHighlightAnimation()
+                        }
+                    }
+                    .overlay {
+                        // Floating chip that follows the finger during board-to-board drags
+                        if viewModel.dragSourceTargetId != nil,
+                           let pieceId = viewModel.draggingPieceId,
+                           let piece = viewModel.engine.state.pieces.first(where: { $0.id == pieceId }),
+                           let loc = viewModel.dragGlobalLocation {
+                            GeometryReader { proxy in
+                                let origin = proxy.frame(in: .global).origin
+                                let cellSize = proxy.size.width / 8.0
+                                let tileSize = cellSize * 0.85
+                                let step = tileSize * 0.85
+                                let span = step * CGFloat(piece.length - 1) + tileSize
+
+                                ZStack(alignment: .topLeading) {
+                                    ForEach(Array(piece.letters.enumerated()), id: \.offset) { index, ch in
+                                        Text(String(ch))
+                                            .font(.system(size: tileSize * 0.6, weight: .bold, design: .rounded))
+                                            .foregroundColor(.letter)
+                                            .frame(width: tileSize, height: tileSize)
+                                            .background(
+                                                RoundedRectangle(cornerRadius: tileSize * 0.15, style: .continuous)
+                                                    .fill(Color.boardCell)
+                                                    .shadow(color: .black.opacity(0.12), radius: 2, x: 0, y: 1)
+                                            )
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: tileSize * 0.15, style: .continuous)
+                                                    .stroke(Color.gridLine, lineWidth: 1)
+                                            )
+                                            .offset(x: CGFloat(index) * step, y: CGFloat(index) * step)
+                                    }
+                                }
+                                .frame(width: span, height: span)
+                                .shadow(color: .black.opacity(0.18), radius: 8, x: 0, y: 4)
+                                .position(
+                                    x: loc.x - origin.x,
+                                    y: loc.y - origin.y - span * 0.4
+                                )
+                            }
+                            .allowsHitTesting(false)
+                            .ignoresSafeArea()
                         }
                     }
                 }
@@ -462,15 +511,23 @@ struct DiagoneContentView: View {
             }
         }
 
-        // Row 1: first piece of each length, Row 2: second piece of each length
-        let row1: [GamePiece?] = (1...5).map { groups[$0].map(sortById)?.first }
-        let row2: [GamePiece?] = (1...5).map { groups[$0].map(sortById)?.dropFirst().first }
+        // Randomized row assignment: chipRowAssignment[i] controls which piece of length i+1 goes in which row
+        let row1: [GamePiece?] = (1...5).map { L in
+            let sorted = groups[L].map(sortById)
+            return chipRowAssignment[L - 1] ? sorted?.first : sorted?.dropFirst().first
+        }
+        let row2: [GamePiece?] = (1...5).map { L in
+            let sorted = groups[L].map(sortById)
+            return chipRowAssignment[L - 1] ? sorted?.dropFirst().first : sorted?.first
+        }
 
         VStack(spacing: 8) {
             chipRow(pieces: row1, cellSize: cellSize, xPositions: xPositions,
                     maxSpan: maxSpan, rowWidth: availableWidth)
             chipRow(pieces: row2, cellSize: cellSize, xPositions: xPositions,
                     maxSpan: maxSpan, rowWidth: availableWidth)
+
+
         }
         .frame(width: availableWidth)
     }

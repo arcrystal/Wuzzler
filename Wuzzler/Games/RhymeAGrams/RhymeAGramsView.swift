@@ -259,8 +259,12 @@ struct RhymeAGramsView: View {
             VStack(spacing: 20) {
                 Spacer()
 
-                // Pyramid
-                PyramidView(letters: viewModel.puzzle.letters)
+                // Pyramid (also acts as a tappable keyboard)
+                PyramidView(letters: viewModel.puzzle.letters,
+                            usedPositions: viewModel.usedPyramidPositions,
+                            onLetterTap: { letter in
+                                viewModel.typeKey(letter)
+                            })
                     .padding(.horizontal)
 
                 Spacer()
@@ -304,12 +308,15 @@ struct RhymeAGramsView: View {
 // MARK: - Pyramid View
 private struct PyramidView: View {
     let letters: [String]
+    let usedPositions: [[Bool]]
+    var onLetterTap: ((String) -> Void)? = nil
 
     var body: some View {
         VStack(spacing: 8) {
-            ForEach(Array(letters.enumerated()), id: \.offset) { index, row in
+            ForEach(Array(letters.enumerated()), id: \.offset) { rowIndex, row in
                 HStack(spacing: 4) {
-                    ForEach(Array(row.enumerated()), id: \.offset) { _, letter in
+                    ForEach(Array(row.enumerated()), id: \.offset) { colIndex, letter in
+                        let isUsed = usedPositions[rowIndex][colIndex]
                         Text(String(letter))
                             .font(.system(size: 24, weight: .bold, design: .rounded))
                             .foregroundColor(.primary)
@@ -318,6 +325,14 @@ private struct PyramidView: View {
                                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                                     .fill(Color.mainDiagonal.opacity(0.3))
                             )
+                            .contentShape(Rectangle())
+                            .opacity(isUsed ? 0.25 : 1.0)
+                            .animation(.easeInOut(duration: 0.15), value: isUsed)
+                            .onTapGesture {
+                                if !isUsed {
+                                    onLetterTap?(String(letter))
+                                }
+                            }
                     }
                 }
             }
@@ -360,20 +375,24 @@ private struct AnswerSlotRow: View {
     let shouldBounce: Bool
     let onTap: () -> Void
 
+    /// Index of the next letter to be typed (0-3), or 4 if full
+    private var cursorIndex: Int { answer.count }
+
     var body: some View {
         HStack(spacing: 8) {
             ForEach(0..<4, id: \.self) { index in
                 let letter = index < answer.count ? String(answer[answer.index(answer.startIndex, offsetBy: index)]) : ""
+                let isCursor = isSelected && index == cursorIndex
                 Text(letter)
                     .font(.system(size: 28, weight: .bold, design: .rounded))
-                    .foregroundColor(letterColor)
+                    .foregroundColor(.primary)
                     .frame(width: 50, height: 50)
                     .background(
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(backgroundColor)
+                            .fill(cellBackground(index: index, isCursor: isCursor))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                    .strokeBorder(borderColor, lineWidth: isSelected ? 3 : 1)
+                                    .strokeBorder(borderColor, lineWidth: isSelected ? 2.5 : 1)
                             )
                     )
                     .scaleEffect(shouldBounce ? 1.1 : 1.0)
@@ -388,11 +407,13 @@ private struct AnswerSlotRow: View {
         }
     }
 
-    private var backgroundColor: Color {
+    private func cellBackground(index: Int, isCursor: Bool) -> Color {
         if isSolved && isCorrect {
             return Color.mainDiagonal.opacity(0.3)
-        } else if isCorrect {
-            return Color.green.opacity(0.2)
+        } else if isCursor {
+            return Color.mainDiagonal.opacity(0.18)
+        } else if isSelected {
+            return Color.mainDiagonal.opacity(0.08)
         } else {
             return Color.boardCell
         }
@@ -401,18 +422,8 @@ private struct AnswerSlotRow: View {
     private var borderColor: Color {
         if isSelected {
             return Color.mainDiagonal
-        } else if isCorrect {
-            return Color.green
         } else {
             return Color.gridLine
-        }
-    }
-
-    private var letterColor: Color {
-        if isSolved || isCorrect {
-            return Color.primary
-        } else {
-            return Color.primary
         }
     }
 }
