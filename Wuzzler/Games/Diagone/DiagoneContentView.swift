@@ -61,11 +61,17 @@ struct DiagoneContentView: View {
                                 .frame(maxWidth: .infinity)
                             // Chip selection pane
                             chipPane(width: width)
-                            // Main diagonal input (shown only when all pieces placed)
-                            if viewModel.showMainInput {
-                                MainDiagonalInputView(input: $viewModel.mainInput, cellSize: computeChipCellSize(totalWidth: width))
-                                    .environmentObject(viewModel)
-                                    .padding(.horizontal)
+                            // Keyboard (shown only when all pieces placed and not finished)
+                            if viewModel.showMainInput && !viewModel.finished {
+                                KeyboardView(
+                                    onKeyTap: { key in
+                                        viewModel.typeKey(key)
+                                    },
+                                    onDelete: {
+                                        viewModel.deleteKey()
+                                    }
+                                )
+                                .padding(.horizontal)
                             }
                         }
                         .padding(.vertical)
@@ -258,6 +264,22 @@ struct DiagoneContentView: View {
                             .padding()
                             .background(Color.mainDiagonal)
                             .cornerRadius(12)
+                    }
+
+                    Button(action: {
+                        UIApplication.shared.endEditing()
+                        viewModel.clearGame()
+                    }) {
+                        Text("Clear Game")
+                            .font(.headline)
+                            .foregroundColor(.mainDiagonal)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.clear)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.mainDiagonal, lineWidth: 2)
+                            )
                     }
 
                     Button(action: onBackToHome) {

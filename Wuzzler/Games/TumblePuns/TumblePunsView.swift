@@ -143,6 +143,21 @@ struct TumblePunsView: View {
                             .cornerRadius(12)
                     }
 
+                    Button(action: {
+                        viewModel.clearGame()
+                    }) {
+                        Text("Clear Game")
+                            .font(.headline)
+                            .foregroundColor(.mainDiagonal)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.clear)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.mainDiagonal, lineWidth: 2)
+                            )
+                    }
+
                     Button(action: onBackToHome) {
                         Text("Back to Home")
                             .font(.headline)
@@ -451,66 +466,19 @@ struct TumblePunsView: View {
 
     // MARK: - Keyboard
     private var keyboardView: some View {
-        VStack(spacing: 4) {
-            let rows = [
-                ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
-                ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
-                ["Z", "X", "C", "V", "B", "N", "M"]
-            ]
-
-            ForEach(0..<rows.count, id: \.self) { rowIndex in
-                HStack(spacing: 3) {
-                    if rowIndex == 1 {
-                        Spacer().frame(width: 14)
-                    } else if rowIndex == 2 {
-                        Spacer().frame(width: 28)
-                    }
-
-                    ForEach(rows[rowIndex], id: \.self) { key in
-                        Text(key)
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(.primary)
-                            .frame(width: 32, height: 38)
-                            .background(
-                                RoundedRectangle(cornerRadius: 5)
-                                    .fill(colorScheme == .dark ? Color(red: 0.28, green: 0.28, blue: 0.33) : Color(UIColor.systemGray4))
-                            )
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                if !viewModel.finished {
-                                    viewModel.typeKey(key)
-                                }
-                            }
-                    }
-
-                    if rowIndex == 2 {
-                        Image(systemName: "delete.left")
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundColor(.primary)
-                            .frame(width: 42, height: 38)
-                            .background(
-                                RoundedRectangle(cornerRadius: 5)
-                                    .fill(colorScheme == .dark ? Color(red: 0.28, green: 0.28, blue: 0.33) : Color(UIColor.systemGray4))
-                            )
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                if !viewModel.finished {
-                                    viewModel.deleteKey()
-                                }
-                            }
-                    }
-
-                    if rowIndex == 1 {
-                        Spacer().frame(width: 14)
-                    } else if rowIndex == 2 {
-                        Spacer().frame(width: 28)
-                    }
+        KeyboardView(
+            onKeyTap: { key in
+                if !viewModel.finished {
+                    viewModel.typeKey(key)
+                }
+            },
+            onDelete: {
+                if !viewModel.finished {
+                    viewModel.deleteKey()
                 }
             }
-        }
-        .padding(.horizontal, 6)
-        .padding(.top, 8)
-        .padding(.bottom, 8)
+        )
+        .padding(.horizontal)
         .opacity(viewModel.finished ? 0.5 : 1.0)
     }
 }

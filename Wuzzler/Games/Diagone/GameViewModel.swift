@@ -533,6 +533,46 @@ public final class GameViewModel: ObservableObject {
         removePiece(from: targetId)
         
     }
+    // MARK: - Keyboard Input
+    public func typeKey(_ key: String) {
+        guard !finished else { return }
+        let up = key.uppercased()
+        if let idx = mainInput.firstIndex(where: { $0.isEmpty }) {
+            mainInput[idx] = up
+        }
+        commitMainInput()
+    }
+
+    public func deleteKey() {
+        guard !finished else { return }
+        if let idx = (0..<mainInput.count).reversed().first(where: { !mainInput[$0].isEmpty }) {
+            mainInput[idx] = ""
+            commitMainInput()
+        }
+    }
+
+    /// Clears all game progress, resetting to a fresh not-started state.
+    public func clearGame() {
+        timerCancellable?.cancel()
+        timerCancellable = nil
+        winWaveTask?.cancel()
+        startDate = nil
+        started = false
+        finished = false
+        elapsedTime = 0
+        finishTime = 0
+        showMainInput = false
+        mainInput = Array(repeating: "", count: 6)
+        showConfetti = false
+        showIncorrectFeedback = false
+        fadingPanePieceIds = []
+        draggingPieceId = nil
+        dragHoverTargetId = nil
+        engine.reset()
+        UserDefaults.standard.removeObject(forKey: storageKey)
+        UserDefaults.standard.removeObject(forKey: metaKey)
+    }
+
     /// Pauses the in-progress game timer and persists current elapsed time.
     public func pause() {
         guard started, !finished else { return }

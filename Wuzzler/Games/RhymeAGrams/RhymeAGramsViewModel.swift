@@ -71,8 +71,8 @@ public final class RhymeAGramsViewModel: ObservableObject {
             self.finishTime = meta.finishTime
         }
 
-        // Restore game state
-        if let savedState = loadSavedState() {
+        // Only restore game state if today's meta indicates we started today
+        if meta?.started == true, let savedState = loadSavedState() {
             self.engine = RhymeAGramsEngine(puzzle: puzzle, state: savedState)
             self.answers = savedState.answers
             self.selectedSlot = savedState.selectedSlot
@@ -97,6 +97,23 @@ public final class RhymeAGramsViewModel: ObservableObject {
         stopTimer()
         saveWorkItem?.cancel()
         saveState()
+    }
+
+    /// Clears all game progress, resetting to a fresh not-started state.
+    public func clearGame() {
+        stopTimer()
+        saveWorkItem?.cancel()
+        startDate = nil
+        started = false
+        finished = false
+        elapsedTime = 0
+        finishTime = 0
+        answers = ["", "", "", ""]
+        selectedSlot = 0
+        winBounceIndex = nil
+        engine = RhymeAGramsEngine(puzzle: engine.puzzle)
+        UserDefaults.standard.removeObject(forKey: storageKey)
+        UserDefaults.standard.removeObject(forKey: metaKey)
     }
 
     public func selectSlot(_ index: Int) {

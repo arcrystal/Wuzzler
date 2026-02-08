@@ -74,8 +74,8 @@ public final class TumblePunsViewModel: ObservableObject {
             self.finishTime = meta.finishTime
         }
 
-        // Restore game state
-        if let savedState = loadSavedState() {
+        // Only restore game state if today's meta indicates we started today
+        if meta?.started == true, let savedState = loadSavedState() {
             self.engine = TumblePunsEngine(puzzle: puzzle, state: savedState)
             self.wordAnswers = savedState.wordAnswers
             self.finalAnswer = savedState.finalAnswer
@@ -102,6 +102,26 @@ public final class TumblePunsViewModel: ObservableObject {
         stopTimer()
         saveWorkItem?.cancel()
         saveState()
+    }
+
+    /// Clears all game progress, resetting to a fresh not-started state.
+    public func clearGame() {
+        stopTimer()
+        saveWorkItem?.cancel()
+        startDate = nil
+        started = false
+        finished = false
+        elapsedTime = 0
+        finishTime = 0
+        wordAnswers = ["", "", "", ""]
+        finalAnswer = ""
+        selectedWordIndex = nil
+        isFinalAnswerSelected = false
+        winBounceIndex = nil
+        finalAnswerBounceIndex = nil
+        engine = TumblePunsEngine(puzzle: engine.puzzle)
+        UserDefaults.standard.removeObject(forKey: storageKey)
+        UserDefaults.standard.removeObject(forKey: metaKey)
     }
 
     public func selectWord(_ index: Int?) {

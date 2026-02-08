@@ -5,7 +5,7 @@ import SwiftUI
 /// building an iOS app. On launch the app displays the home screen with
 /// multiple game options.
 @main
-struct DiagoneApp: App {
+struct WuzzlerApp: App {
     var body: some Scene {
         WindowGroup {
             AppCoordinatorView()
