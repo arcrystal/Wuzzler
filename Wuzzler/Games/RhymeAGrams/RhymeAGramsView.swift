@@ -66,8 +66,8 @@ struct RhymeAGramsView: View {
 
             VStack(spacing: 16) {
                 Spacer()
-                Image(systemName: "triangle.fill")
-                    .font(.system(size: 80))
+                Image(systemName: "triangle")
+                    .font(.system(size: 80, weight: .light))
                     .foregroundColor(.mainDiagonal)
 
                 Text("RhymeAGrams")

@@ -84,8 +84,8 @@ struct TumblePunsView: View {
         
             VStack(spacing: 16) {
                 Spacer()
-                Image(systemName: "circle.grid.3x3.fill")
-                    .font(.system(size: 80))
+                Image(systemName: "circle")
+                    .font(.system(size: 80, weight: .light))
                     .foregroundColor(.mainDiagonal)
 
                 Text("TumblePuns")
