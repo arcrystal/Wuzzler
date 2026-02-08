@@ -29,6 +29,7 @@ struct DiagoneContentView: View {
     @State private var winHighlightTimer: Timer? = nil
 
     @State private var showHub: Bool = true
+    @State private var gameCleared: Bool = false
     /// Random row assignment for chip pairs: true = first-by-id in row 1, false = swapped
     @State private var chipRowAssignment: [Bool] = (0..<5).map { _ in Bool.random() }
 
@@ -36,7 +37,7 @@ struct DiagoneContentView: View {
     private var hubMode: HubMode {
         if viewModel.isSolved {
             return .completed
-        } else if viewModel.started {
+        } else if viewModel.started || gameCleared {
             return .inProgress
         } else {
             return .notStarted
@@ -298,7 +299,7 @@ struct DiagoneContentView: View {
                     }
 
                 case .inProgress:
-                    Text("You're in the middle of today's puzzle.")
+                    Text(gameCleared ? "Game cleared." : "You're in the middle of today's puzzle.")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -310,10 +311,15 @@ struct DiagoneContentView: View {
 
                     Button(action: {
                         UIApplication.shared.endEditing()
-                        viewModel.resume()
+                        if gameCleared {
+                            gameCleared = false
+                            viewModel.startGame()
+                        } else {
+                            viewModel.resume()
+                        }
                         showHub = false
                     }) {
-                        Text("Resume")
+                        Text(gameCleared ? "Play" : "Resume")
                             .font(.headline)
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
@@ -325,6 +331,7 @@ struct DiagoneContentView: View {
                     Button(action: {
                         UIApplication.shared.endEditing()
                         viewModel.clearGame()
+                        gameCleared = true
                     }) {
                         Text("Clear Game")
                             .font(.headline)
@@ -337,6 +344,8 @@ struct DiagoneContentView: View {
                                     .stroke(Color.mainDiagonal, lineWidth: 2)
                             )
                     }
+                    .opacity(gameCleared ? 0.4 : 1.0)
+                    .disabled(gameCleared)
 
                     Button(action: onBackToHome) {
                         Text("Back to Home")

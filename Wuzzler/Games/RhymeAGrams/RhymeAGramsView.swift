@@ -12,12 +12,13 @@ struct RhymeAGramsView: View {
     let onBackToHome: () -> Void
 
     @State private var showHub: Bool = true
+    @State private var gameCleared: Bool = false
 
     private enum HubMode { case notStarted, inProgress, completed }
     private var hubMode: HubMode {
         if viewModel.finished {
             return .completed
-        } else if viewModel.started {
+        } else if viewModel.started || gameCleared {
             return .inProgress
         } else {
             return .notStarted
@@ -103,7 +104,7 @@ struct RhymeAGramsView: View {
                     }
 
                 case .inProgress:
-                    Text("You're in the middle of today's puzzle.")
+                    Text(gameCleared ? "Game cleared." : "You're in the middle of today's puzzle.")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -115,10 +116,15 @@ struct RhymeAGramsView: View {
 
                     Button(action: {
                         UIApplication.shared.endEditing()
-                        viewModel.resume()
+                        if gameCleared {
+                            gameCleared = false
+                            viewModel.startGame()
+                        } else {
+                            viewModel.resume()
+                        }
                         showHub = false
                     }) {
-                        Text("Resume")
+                        Text(gameCleared ? "Play" : "Resume")
                             .font(.headline)
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
@@ -130,6 +136,7 @@ struct RhymeAGramsView: View {
                     Button(action: {
                         UIApplication.shared.endEditing()
                         viewModel.clearGame()
+                        gameCleared = true
                     }) {
                         Text("Clear Game")
                             .font(.headline)
@@ -142,6 +149,8 @@ struct RhymeAGramsView: View {
                                     .stroke(Color.mainDiagonal, lineWidth: 2)
                             )
                     }
+                    .opacity(gameCleared ? 0.4 : 1.0)
+                    .disabled(gameCleared)
 
                     Button(action: onBackToHome) {
                         Text("Back to Home")

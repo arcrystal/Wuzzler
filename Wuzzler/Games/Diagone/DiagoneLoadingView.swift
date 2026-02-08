@@ -5,6 +5,34 @@ struct DiagoneLoadingView: View {
     let onStart: () -> Void
     let onBack: () -> Void
 
+    @AppStorage("tutorial_seen_diagone") private var tutorialSeen = false
+    @State private var showTutorial = false
+
+    private var tutorialSteps: [TutorialStep] {
+        [
+            TutorialStep(
+                icon: "square.grid.3x3",
+                title: "Welcome to Diagone",
+                description: "Place diagonal word chips onto a 6×6 board to spell six horizontal words."
+            ),
+            TutorialStep(
+                icon: "hand.draw",
+                title: "Drag & Drop",
+                description: "Drag chips from the tray onto the board. Each chip fills a diagonal of matching length."
+            ),
+            TutorialStep(
+                icon: "arrow.uturn.backward",
+                title: "Rearrange Freely",
+                description: "Drag a placed chip to a different diagonal, or drag it off the board to remove it."
+            ),
+            TutorialStep(
+                icon: "character.textbox",
+                title: "Complete the Diagonal",
+                description: "Once all chips are placed, type letters into the highlighted main diagonal to finish the puzzle."
+            ),
+        ]
+    }
+
     var body: some View {
         VStack(spacing: 28) {
             HStack {
@@ -55,6 +83,23 @@ struct DiagoneLoadingView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(UIColor.systemGray6))
         .navigationBarTitleDisplayMode(.inline)
+        .overlay {
+            if showTutorial {
+                TutorialOverlay(
+                    steps: tutorialSteps,
+                    accentColor: .mainDiagonal,
+                    onDismiss: {
+                        tutorialSeen = true
+                        showTutorial = false
+                    }
+                )
+            }
+        }
+        .onAppear {
+            if !tutorialSeen {
+                showTutorial = true
+            }
+        }
     }
 
     private var formattedDate: String {

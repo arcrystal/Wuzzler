@@ -5,6 +5,29 @@ struct RhymeAGramsLoadingView: View {
     let onStart: () -> Void
     let onBack: () -> Void
 
+    @AppStorage("tutorial_seen_rhymeagrams") private var tutorialSeen = false
+    @State private var showTutorial = false
+
+    private var tutorialSteps: [TutorialStep] {
+        [
+            TutorialStep(
+                icon: "triangle",
+                title: "Welcome to RhymeAGrams",
+                description: "Find four 4-letter words hidden in the pyramid of letters. All four words rhyme!"
+            ),
+            TutorialStep(
+                icon: "hand.tap",
+                title: "Tap to Spell",
+                description: "Tap letters in the pyramid or use the keyboard to spell each word. Every letter is used exactly once across all four words."
+            ),
+            TutorialStep(
+                icon: "arrow.right.arrow.left",
+                title: "Navigate Words",
+                description: "Tap any answer row to select it. Words auto-advance when filled. Backspace moves to the previous word if the current one is empty."
+            ),
+        ]
+    }
+
     var body: some View {
         VStack(spacing: 28) {
             HStack {
@@ -56,6 +79,23 @@ struct RhymeAGramsLoadingView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(UIColor.systemGray6))
         .navigationBarTitleDisplayMode(.inline)
+        .overlay {
+            if showTutorial {
+                TutorialOverlay(
+                    steps: tutorialSteps,
+                    accentColor: .mainDiagonal,
+                    onDismiss: {
+                        tutorialSeen = true
+                        showTutorial = false
+                    }
+                )
+            }
+        }
+        .onAppear {
+            if !tutorialSeen {
+                showTutorial = true
+            }
+        }
     }
 
     private var formattedDate: String {
