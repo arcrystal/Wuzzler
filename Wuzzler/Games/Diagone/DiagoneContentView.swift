@@ -622,5 +622,10 @@ private struct FloatingChipOverlay: View {
         .onReceive(viewModel.dragPositionDidChange) {
             location = viewModel.dragGlobalLocation
         }
+        .onChange(of: viewModel.dragSourceTargetId) { _, newValue in
+            if newValue == nil {
+                location = nil
+            }
+        }
     }
 }

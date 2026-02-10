@@ -402,17 +402,20 @@ public final class GameViewModel: ObservableObject {
                 self?.showIncorrectFeedback = false
             }
         }
-        clearMainDiagonal()
+        clearMainDiagonal(hideInput: false)
     }
 
     /// Clears the main diagonal both in the engine state and the bound input, so new typing doesn't instantly retrigger feedback.
-    private func clearMainDiagonal() {
+    /// - Parameter hideInput: When `true` (default) also hides the keyboard/input UI.
+    ///   Pass `false` after incorrect feedback so the user can immediately retype.
+    private func clearMainDiagonal(hideInput: Bool = true) {
         let count = engine.state.mainDiagonal.cells.count
         let empty = Array(repeating: "", count: count)
         // Keep the UI text fields in sync so the board is no longer considered "full".
         mainInput = empty
-        // Hide the main input since the board is no longer complete.
-        showMainInput = false
+        if hideInput {
+            showMainInput = false
+        }
         // Use the engine API to clear the diagonal (handles undo/redo and recomputeBoard).
         engine.setMainDiagonal(empty)
         saveState()
