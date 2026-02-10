@@ -1,4 +1,4 @@
-Befoimport SwiftUI
+import SwiftUI
 import UniformTypeIdentifiers
 
 private struct TileBounceState { var scale: CGFloat = 1.0 }
