@@ -97,6 +97,7 @@ public final class RhymeAGramsViewModel: ObservableObject {
         stopTimer()
         saveWorkItem?.cancel()
         saveState()
+        saveDailyMeta(elapsedTime: elapsedTime)
     }
 
     /// Clears all game progress, resetting to a fresh not-started state.
@@ -198,7 +199,6 @@ public final class RhymeAGramsViewModel: ObservableObject {
             .sink { [weak self] _ in
                 guard let self = self, let start = self.startDate else { return }
                 self.elapsedTime = Date().timeIntervalSince(start)
-                self.saveDailyMeta(elapsedTime: self.elapsedTime)
             }
     }
 

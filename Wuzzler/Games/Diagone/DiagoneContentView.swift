@@ -92,46 +92,12 @@ struct DiagoneContentView: View {
                         }
                     }
                     .overlay {
-                        // Floating chip that follows the finger during board-to-board drags
-                        if viewModel.dragSourceTargetId != nil,
-                           let pieceId = viewModel.draggingPieceId,
-                           let piece = viewModel.engine.state.pieces.first(where: { $0.id == pieceId }),
-                           let loc = viewModel.dragGlobalLocation {
-                            GeometryReader { proxy in
-                                let origin = proxy.frame(in: .global).origin
-                                let cellSize = proxy.size.width / 8.0
-                                let tileSize = cellSize * 0.85
-                                let step = tileSize * 0.85
-                                let span = step * CGFloat(piece.length - 1) + tileSize
-
-                                ZStack(alignment: .topLeading) {
-                                    ForEach(Array(piece.letters.enumerated()), id: \.offset) { index, ch in
-                                        Text(String(ch))
-                                            .font(.system(size: tileSize * 0.6, weight: .bold, design: .rounded))
-                                            .foregroundColor(.letter)
-                                            .frame(width: tileSize, height: tileSize)
-                                            .background(
-                                                RoundedRectangle(cornerRadius: tileSize * 0.15, style: .continuous)
-                                                    .fill(Color.boardCell)
-                                                    .shadow(color: .black.opacity(0.12), radius: 2, x: 0, y: 1)
-                                            )
-                                            .overlay(
-                                                RoundedRectangle(cornerRadius: tileSize * 0.15, style: .continuous)
-                                                    .stroke(Color.gridLine, lineWidth: 1)
-                                            )
-                                            .offset(x: CGFloat(index) * step, y: CGFloat(index) * step)
-                                    }
-                                }
-                                .frame(width: span, height: span)
-                                .shadow(color: .black.opacity(0.18), radius: 8, x: 0, y: 4)
-                                .position(
-                                    x: loc.x - origin.x,
-                                    y: loc.y - origin.y - span * 0.4
-                                )
-                            }
-                            .allowsHitTesting(false)
-                            .ignoresSafeArea()
-                        }
+                        // Floating chip that follows the finger during board-to-board drags.
+                        // Extracted into its own view so high-frequency position updates
+                        // (via Combine subject) only invalidate this small overlay, not the
+                        // entire game view tree.
+                        FloatingChipOverlay()
+                            .environmentObject(viewModel)
                     }
                 }
             }
@@ -601,6 +567,60 @@ struct DiagoneContentView: View {
                 UIApplication.shared.endEditing()
                 showHub = true
             }
+        }
+    }
+}
+
+// MARK: - Floating Chip Overlay
+/// Isolated view that tracks the drag position via a Combine subject so that
+/// high-frequency position updates only invalidate this small overlay instead
+/// of the entire DiagoneContentView tree.
+private struct FloatingChipOverlay: View {
+    @EnvironmentObject var viewModel: GameViewModel
+    @State private var location: CGPoint? = nil
+
+    var body: some View {
+        GeometryReader { proxy in
+            if viewModel.dragSourceTargetId != nil,
+               let pieceId = viewModel.draggingPieceId,
+               let piece = viewModel.engine.state.pieces.first(where: { $0.id == pieceId }),
+               let loc = location {
+                let origin = proxy.frame(in: .global).origin
+                let cellSize = proxy.size.width / 8.0
+                let tileSize = cellSize * 0.85
+                let step = tileSize * 0.85
+                let span = step * CGFloat(piece.length - 1) + tileSize
+
+                ZStack(alignment: .topLeading) {
+                    ForEach(Array(piece.letters.enumerated()), id: \.offset) { index, ch in
+                        Text(String(ch))
+                            .font(.system(size: tileSize * 0.6, weight: .bold, design: .rounded))
+                            .foregroundColor(.letter)
+                            .frame(width: tileSize, height: tileSize)
+                            .background(
+                                RoundedRectangle(cornerRadius: tileSize * 0.15, style: .continuous)
+                                    .fill(Color.boardCell)
+                                    .shadow(color: .black.opacity(0.12), radius: 2, x: 0, y: 1)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: tileSize * 0.15, style: .continuous)
+                                    .stroke(Color.gridLine, lineWidth: 1)
+                            )
+                            .offset(x: CGFloat(index) * step, y: CGFloat(index) * step)
+                    }
+                }
+                .frame(width: span, height: span)
+                .shadow(color: .black.opacity(0.18), radius: 8, x: 0, y: 4)
+                .position(
+                    x: loc.x - origin.x - (viewModel.boardDragAnchorFraction.x - 0.5) * span,
+                    y: loc.y - origin.y - (viewModel.boardDragAnchorFraction.y - 0.5) * span
+                )
+            }
+        }
+        .allowsHitTesting(false)
+        .ignoresSafeArea()
+        .onReceive(viewModel.dragPositionDidChange) {
+            location = viewModel.dragGlobalLocation
         }
     }
 }

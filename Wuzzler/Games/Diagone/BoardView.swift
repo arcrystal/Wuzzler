@@ -223,7 +223,7 @@ fileprivate struct DropTargetOverlay: View {
                         let distance = sqrt(pow(value.translation.width, 2) + pow(value.translation.height, 2))
                         if distance > 10 {
                             isDragging = true
-                            viewModel.beginDraggingFromBoard(targetId: target.id)
+                            viewModel.beginDraggingFromBoard(targetId: target.id, fingerGlobal: value.location)
                             viewModel.updateDrag(globalLocation: value.location)
                         }
                     }

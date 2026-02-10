@@ -47,17 +47,31 @@ public final class GameViewModel: ObservableObject {
     /// The global screen coordinates of the current drag location. Updated by
     /// the chip's `DragGesture` on every movement. The board uses this to
     /// calculate which diagonal the user is hovering over.
-    @Published public var dragGlobalLocation: CGPoint? = nil
+    /// NOT @Published — high-frequency updates during drag would cause full
+    /// view-tree invalidation. The floating chip overlay subscribes to
+    /// `dragPositionDidChange` instead.
+    public var dragGlobalLocation: CGPoint? = nil
 
     /// The target from which a piece is being dragged (for board-to-board moves).
     /// When non-nil, indicates the drag originated from the board rather than the pane.
     @Published public var dragSourceTargetId: String? = nil
 
+    /// Fractional grab point (0–1) within the piece's bounding box when a board
+    /// drag starts. Used to position the floating chip so the finger stays at
+    /// the same relative spot as where the user initially touched.
+    /// NOT @Published — only read when the floating chip overlay renders.
+    public var boardDragAnchorFraction: CGPoint = CGPoint(x: 0.5, y: 0.5)
+
     /// The frame of the board in global coordinates. This is set by the
     /// `BoardView` via a `GeometryReader` so that drag positions can be
     /// converted into board space when determining hover state. It will be
     /// `.zero` until the board appears on screen.
-    @Published public var boardFrameGlobal: CGRect = .zero
+    /// NOT @Published — only read internally by the view model.
+    public var boardFrameGlobal: CGRect = .zero
+
+    /// Fires on every drag position change so the floating chip overlay can
+    /// update without causing a full view-tree invalidation.
+    public let dragPositionDidChange = PassthroughSubject<Void, Never>()
     
     // Win sequence state
 //    @Published public var winBounceIndex: Int? = nil
@@ -166,7 +180,6 @@ public final class GameViewModel: ObservableObject {
             .sink { [weak self] _ in
                 guard let self = self, let start = self.startDate else { return }
                 self.elapsedTime = Date().timeIntervalSince(start)
-                self.saveDailyMeta(elapsedTime: self.elapsedTime)
             }
     }
 
@@ -442,8 +455,10 @@ public final class GameViewModel: ObservableObject {
     @MainActor
     public func updateDrag(globalLocation: CGPoint) {
         dragGlobalLocation = globalLocation
+        dragPositionDidChange.send()
         guard !finished, let pid = draggingPieceId, boardFrameGlobal != .zero else {
-            dragHoverTargetId = nil; return
+            if dragHoverTargetId != nil { dragHoverTargetId = nil }
+            return
         }
 
         // Convert to board-local coords (points)
@@ -500,7 +515,9 @@ public final class GameViewModel: ObservableObject {
             if dist < bestDist { bestDist = dist; bestId = t.id }
         }
 
-        dragHoverTargetId = bestId
+        if dragHoverTargetId != bestId {
+            dragHoverTargetId = bestId
+        }
     }
 
     @MainActor
@@ -512,6 +529,7 @@ public final class GameViewModel: ObservableObject {
             dragHoverTargetId = nil
             dragSourceTargetId = nil
             dragGlobalLocation = nil
+            boardDragAnchorFraction = CGPoint(x: 0.5, y: 0.5)
         }
         guard let pid = draggingPieceId else { return }
 
@@ -551,7 +569,7 @@ public final class GameViewModel: ObservableObject {
 
     /// Begins dragging a piece that is already placed on the board.
     @MainActor
-    public func beginDraggingFromBoard(targetId: String) {
+    public func beginDraggingFromBoard(targetId: String, fingerGlobal: CGPoint) {
         guard !finished else { return }
         guard let target = engine.state.targets.first(where: { $0.id == targetId }),
               let pieceId = target.pieceId else { return }
@@ -559,6 +577,18 @@ public final class GameViewModel: ObservableObject {
         dragSourceTargetId = targetId
         draggingPieceId = pieceId
         dragHoverTargetId = nil
+
+        // Compute fractional anchor: where the finger is relative to the piece's bounding box on the board
+        if let startCell = target.cells.first, boardFrameGlobal != .zero {
+            let boardCellSize = boardFrameGlobal.width / 6.0
+            let pieceSize = CGFloat(target.length) * boardCellSize
+            let pieceMinX = boardFrameGlobal.minX + CGFloat(startCell.col) * boardCellSize
+            let pieceMinY = boardFrameGlobal.minY + CGFloat(startCell.row) * boardCellSize
+            boardDragAnchorFraction = CGPoint(
+                x: (fingerGlobal.x - pieceMinX) / pieceSize,
+                y: (fingerGlobal.y - pieceMinY) / pieceSize
+            )
+        }
 
         // Remove piece from board via engine
         _ = engine.removePiece(from: targetId)
@@ -644,7 +674,6 @@ public final class GameViewModel: ObservableObject {
         self.timerCancellable = ticker.sink { [weak self] _ in
             guard let self = self, let s = self.startDate else { return }
             self.elapsedTime = Date().timeIntervalSince(s)
-            self.saveDailyMeta(started: true, finished: false, elapsedTime: self.elapsedTime)
         }
     }
     
