@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import Combine
+import UIKit
 
 @MainActor
 public final class TumblePunsViewModel: ObservableObject {
@@ -14,6 +15,8 @@ public final class TumblePunsViewModel: ObservableObject {
     @Published public var finishTime: TimeInterval = 0
     @Published public var winBounceIndex: Int? = nil
     @Published public var finalAnswerBounceIndex: Int? = nil
+    @Published public var shakeTrigger: Int = 0
+    @Published public var showIncorrectFeedback: Bool = false
 
     private(set) var engine: TumblePunsEngine
     private var timerCancellable: AnyCancellable?
@@ -191,13 +194,43 @@ public final class TumblePunsViewModel: ObservableObject {
     }
 
     private func checkSolved() {
-        guard !finished && engine.isSolved else { return }
-        finished = true
-        finishTime = elapsedTime
-        stopTimer()
-        saveDailyMeta(finished: true, finishTime: finishTime)
+        guard !finished else { return }
+
+        // Check if all inputs are completely filled
+        let allWordsFilled = (0..<4).allSatisfy { i in
+            wordAnswers[i].count >= engine.puzzle.words[i].solution.count
+        }
+        let expectedFinalLength = engine.puzzle.answerPattern.filter { $0 == "_" }.count
+        let finalFilled = finalAnswer.count >= expectedFinalLength
+        guard allWordsFilled && finalFilled else { return }
+
+        if engine.isSolved {
+            finished = true
+            finishTime = elapsedTime
+            stopTimer()
+            saveDailyMeta(finished: true, finishTime: finishTime)
+            saveState()
+            runWinSequence()
+        } else {
+            triggerIncorrectFeedback()
+        }
+    }
+
+    private func triggerIncorrectFeedback() {
+        UINotificationFeedbackGenerator().notificationOccurred(.warning)
+        withAnimation(.easeIn(duration: 0.12)) {
+            shakeTrigger += 1
+            showIncorrectFeedback = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) { [weak self] in
+            withAnimation(.easeOut(duration: 0.2)) {
+                self?.showIncorrectFeedback = false
+            }
+        }
+        // Clear the final answer so the user can retype it
+        engine.clearFinalAnswer()
+        finalAnswer = engine.state.finalAnswer
         saveState()
-        runWinSequence()
     }
 
     // MARK: - Timer

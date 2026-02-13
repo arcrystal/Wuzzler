@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import Combine
+import UIKit
 
 @MainActor
 public final class RhymeAGramsViewModel: ObservableObject {
@@ -11,6 +12,8 @@ public final class RhymeAGramsViewModel: ObservableObject {
     @Published public var elapsedTime: TimeInterval = 0
     @Published public var finishTime: TimeInterval = 0
     @Published public var winBounceIndex: Int? = nil
+    @Published public var shakeTrigger: Int = 0
+    @Published public var showIncorrectFeedback: Bool = false
 
     private(set) var engine: RhymeAGramsEngine
     private var timerCancellable: AnyCancellable?
@@ -181,13 +184,35 @@ public final class RhymeAGramsViewModel: ObservableObject {
     }
 
     private func checkSolved() {
-        guard !finished && engine.isSolved else { return }
-        finished = true
-        finishTime = elapsedTime
-        stopTimer()
-        saveDailyMeta(finished: true, finishTime: finishTime)
-        saveState()
-        runWinSequence()
+        guard !finished else { return }
+
+        // Check if all answers are completely filled (4 letters each)
+        let allFilled = answers.allSatisfy { $0.count >= 4 }
+        guard allFilled else { return }
+
+        if engine.isSolved {
+            finished = true
+            finishTime = elapsedTime
+            stopTimer()
+            saveDailyMeta(finished: true, finishTime: finishTime)
+            saveState()
+            runWinSequence()
+        } else {
+            triggerIncorrectFeedback()
+        }
+    }
+
+    private func triggerIncorrectFeedback() {
+        UINotificationFeedbackGenerator().notificationOccurred(.warning)
+        withAnimation(.easeIn(duration: 0.12)) {
+            shakeTrigger += 1
+            showIncorrectFeedback = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) { [weak self] in
+            withAnimation(.easeOut(duration: 0.2)) {
+                self?.showIncorrectFeedback = false
+            }
+        }
     }
 
     // MARK: - Timer

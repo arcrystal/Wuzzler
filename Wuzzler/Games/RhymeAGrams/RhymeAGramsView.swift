@@ -309,6 +309,14 @@ struct RhymeAGramsView: View {
                 Spacer(minLength: 20)
             }
             .padding(.vertical)
+            .modifier(Shake(animatableData: CGFloat(viewModel.shakeTrigger)))
+        }
+        .overlay(alignment: .bottom) {
+            if viewModel.showIncorrectFeedback {
+                IncorrectToastView()
+                    .padding(.bottom, 12)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
         }
         .background(Color.boardCell.opacity(0.2).ignoresSafeArea())
     }
@@ -434,6 +442,33 @@ private struct AnswerSlotRow: View {
         } else {
             return Color.gridLine
         }
+    }
+}
+
+// MARK: - Feedback Effects
+
+private struct Shake: GeometryEffect {
+    var amount: CGFloat = 8
+    var shakesPerUnit: CGFloat = 3
+    var animatableData: CGFloat
+    func effectValue(size: CGSize) -> ProjectionTransform {
+        let translation = amount * sin(animatableData * .pi * shakesPerUnit)
+        return ProjectionTransform(CGAffineTransform(translationX: translation, y: 0))
+    }
+}
+
+private struct IncorrectToastView: View {
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .imageScale(.small)
+            Text("Not quite\u{2014}keep going")
+                .font(.subheadline.weight(.semibold))
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(.ultraThinMaterial, in: Capsule())
+        .shadow(radius: 2, y: 1)
     }
 }
 

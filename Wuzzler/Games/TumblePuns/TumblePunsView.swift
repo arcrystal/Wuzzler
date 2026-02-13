@@ -3,7 +3,6 @@ import SwiftUI
 struct TumblePunsView: View {
     @ObservedObject var viewModel: TumblePunsViewModel
     @Environment(\.scenePhase) private var scenePhase
-    @Environment(\.colorScheme) private var colorScheme
     let onBackToHome: () -> Void
 
     @State private var showHub: Bool = true
@@ -42,7 +41,7 @@ struct TumblePunsView: View {
 
     var body: some View {
         ZStack {
-            (colorScheme == .dark ? Color(red: 0.12, green: 0.13, blue: 0.18) : Color.boardCell.opacity(0.2))
+            Color.boardCell.opacity(0.2)
                 .ignoresSafeArea()
 
             if showHub {
@@ -241,6 +240,14 @@ struct TumblePunsView: View {
                 }
                 .padding(.vertical, 20)
             }
+            .modifier(Shake(animatableData: CGFloat(viewModel.shakeTrigger)))
+        }
+        .overlay(alignment: .bottom) {
+            if viewModel.showIncorrectFeedback {
+                IncorrectToastView()
+                    .padding(.bottom, 12)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
         }
     }
 
@@ -290,7 +297,7 @@ struct TumblePunsView: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 16)
-        .background(colorScheme == .dark ? Color(red: 0.15, green: 0.16, blue: 0.22) : Color.boardCell.opacity(0.1))
+        .background(Color.boardCell.opacity(0.1))
     }
 
     // MARK: - Words Grid
@@ -330,13 +337,13 @@ struct TumblePunsView: View {
                         .frame(width: 28, height: 28)
                         .background(
                             Circle()
-                                .fill(colorScheme == .dark ? Color(red: 0.25, green: 0.25, blue: 0.3) : Color.boardCell)
-                                .shadow(color: .black.opacity(colorScheme == .dark ? 0.3 : 0.1), radius: 2, x: 0, y: 1)
+                                .fill(Color.boardCell)
+                                .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
                         )
                         .overlay(
                             Circle()
                                 .strokeBorder(
-                                    colorScheme == .dark ? Color(red: 0.5, green: 0.7, blue: 1.0).opacity(0.6) : Color.mainDiagonal.opacity(0.35),
+                                    Color.mainDiagonal.opacity(0.35),
                                     lineWidth: 1.5
                                 )
                         )
@@ -350,7 +357,7 @@ struct TumblePunsView: View {
                     } label: {
                         Image(systemName: "arrow.triangle.2.circlepath")
                             .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(colorScheme == .dark ? Color(red: 0.6, green: 0.75, blue: 1.0) : .secondary)
+                            .foregroundColor(.secondary)
                     }
                     .buttonStyle(.plain)
                 }
@@ -367,20 +374,19 @@ struct TumblePunsView: View {
 
                     Text(displayLetter)
                         .font(.system(size: 15, weight: .bold))
-                        .foregroundColor(isCorrect ? (colorScheme == .dark ? Color(red: 0.4, green: 0.9, blue: 0.6) : .green) : .primary)
+                        .foregroundColor(isCorrect ? .green : .primary)
                         .frame(width: 22, height: 28)
                         .background(
                             RoundedRectangle(cornerRadius: 4)
-                                .fill(isShaded ? (colorScheme == .dark ? Color(red: 0.45, green: 0.6, blue: 1.0).opacity(0.65) : Color.mainDiagonal.opacity(isSelected ? 0.45 : 0.3)) : (colorScheme == .dark ? Color(red: 0.25, green: 0.25, blue: 0.3) : Color.boardCell))
+                                .fill(isShaded ? Color.mainDiagonal.opacity(isSelected ? 0.45 : 0.3) : Color.boardCell)
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: 4)
                                 .strokeBorder(
-                                    isCorrect ? (colorScheme == .dark ? Color(red: 0.4, green: 0.9, blue: 0.6) : .green) : (isShaded && colorScheme == .dark ? Color(red: 0.5, green: 0.7, blue: 1.0).opacity(0.8) : (isSelected ? (colorScheme == .dark ? Color(red: 0.5, green: 0.7, blue: 1.0) : Color.mainDiagonal) : Color.gray.opacity(0.4))),
-                                    lineWidth: (isShaded && colorScheme == .dark) ? 1.5 : (isSelected ? 2 : 1)
+                                    isCorrect ? .green : (isSelected ? Color.mainDiagonal : Color.gray.opacity(0.4)),
+                                    lineWidth: isSelected ? 2 : 1
                                 )
                         )
-                        .shadow(color: isShaded && colorScheme == .dark ? Color(red: 0.5, green: 0.7, blue: 1.0).opacity(0.3) : .clear, radius: 3, x: 0, y: 0)
                         .offset(y: shouldBounce ? -8 : 0)
                         .animation(.easeInOut(duration: 0.3), value: shouldBounce)
                 }
@@ -443,16 +449,15 @@ struct TumblePunsView: View {
                             .frame(width: 34, height: 42)
                             .background(
                                 RoundedRectangle(cornerRadius: 5)
-                                    .fill(colorScheme == .dark ? Color(red: 0.45, green: 0.6, blue: 1.0).opacity(0.65) : Color.mainDiagonal.opacity(0.3))
+                                    .fill(Color.mainDiagonal.opacity(0.3))
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: 5)
                                     .strokeBorder(
-                                        viewModel.isFinalAnswerSelected ? (colorScheme == .dark ? Color(red: 0.5, green: 0.7, blue: 1.0) : Color.mainDiagonal) : (colorScheme == .dark ? Color(red: 0.5, green: 0.7, blue: 1.0).opacity(0.8) : Color.gray.opacity(0.4)),
-                                        lineWidth: colorScheme == .dark ? 1.5 : (viewModel.isFinalAnswerSelected ? 2 : 1)
+                                        viewModel.isFinalAnswerSelected ? Color.mainDiagonal : Color.gray.opacity(0.4),
+                                        lineWidth: viewModel.isFinalAnswerSelected ? 2 : 1
                                     )
                             )
-                            .shadow(color: colorScheme == .dark ? Color(red: 0.5, green: 0.7, blue: 1.0).opacity(0.3) : .clear, radius: 3, x: 0, y: 0)
                             .scaleEffect(shouldBounce ? 1.15 : 1.0)
                             .animation(.spring(response: 0.3, dampingFraction: 0.6), value: shouldBounce)
                     } else {
@@ -489,5 +494,32 @@ struct TumblePunsView: View {
         )
         .padding(.horizontal)
         .opacity(viewModel.finished ? 0.5 : 1.0)
+    }
+}
+
+// MARK: - Feedback Effects
+
+private struct Shake: GeometryEffect {
+    var amount: CGFloat = 8
+    var shakesPerUnit: CGFloat = 3
+    var animatableData: CGFloat
+    func effectValue(size: CGSize) -> ProjectionTransform {
+        let translation = amount * sin(animatableData * .pi * shakesPerUnit)
+        return ProjectionTransform(CGAffineTransform(translationX: translation, y: 0))
+    }
+}
+
+private struct IncorrectToastView: View {
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .imageScale(.small)
+            Text("Not quite\u{2014}keep going")
+                .font(.subheadline.weight(.semibold))
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(.ultraThinMaterial, in: Capsule())
+        .shadow(radius: 2, y: 1)
     }
 }

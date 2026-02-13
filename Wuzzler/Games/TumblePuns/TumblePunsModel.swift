@@ -121,6 +121,10 @@ class TumblePunsEngine {
         }
     }
 
+    func clearFinalAnswer() {
+        state.finalAnswer = ""
+    }
+
     /// Check if all four words are correctly solved
     var areWordsSolved: Bool {
         for (index, word) in puzzle.words.enumerated() {
