@@ -84,9 +84,7 @@ struct TumblePunsView: View {
         
             VStack(spacing: 16) {
                 Spacer()
-                Image(systemName: "circle")
-                    .font(.system(size: 80, weight: .light))
-                    .foregroundColor(.mainDiagonal)
+                TumblePunsIconView(size: 80)
 
                 Text("TumblePuns")
                     .font(.largeTitle)
@@ -364,7 +362,7 @@ struct TumblePunsView: View {
             }
             .frame(width: 85, height: 85)
 
-            // Answer boxes
+            // Answer boxes with clear button overlay
             HStack(spacing: 2) {
                 ForEach(0..<word.solution.count, id: \.self) { letterIndex in
                     let userAnswer = viewModel.wordAnswers[index]
@@ -395,6 +393,23 @@ struct TumblePunsView: View {
             .onTapGesture {
                 if !viewModel.finished {
                     viewModel.selectWord(index)
+                }
+            }
+            .overlay(alignment: .topTrailing) {
+                if !viewModel.wordAnswers[index].isEmpty && !isCorrect && !viewModel.finished {
+                    Button {
+                        viewModel.clearWord(at: index)
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 14))
+                            .foregroundColor(.secondary)
+                            .padding(8)
+                            .contentShape(Circle().scale(2.5))
+                    }
+                    .buttonStyle(.plain)
+                    .offset(x: 16, y: -16)
+                    .zIndex(1)
+                    .transition(.opacity)
                 }
             }
         }

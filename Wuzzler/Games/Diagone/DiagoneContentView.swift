@@ -221,16 +221,7 @@ struct DiagoneContentView: View {
 
             VStack(spacing: 16) {
                 Spacer()
-                Image(systemName: "square")
-                    .font(.system(size: 80, weight: .light))
-                    .foregroundColor(.mainDiagonal)
-                    .overlay(
-                        Path { path in
-                            path.move(to: CGPoint(x: 16, y: 16))
-                            path.addLine(to: CGPoint(x: 68, y: 68))
-                        }
-                        .stroke(Color.mainDiagonal, style: StrokeStyle(lineWidth: 2, lineCap: .round))
-                    )
+                DiagoneIconView(size: 80)
 
                 Text("Diagone")
                     .font(.largeTitle)

@@ -4,25 +4,23 @@ struct HomeView: View {
     let onGameSelected: (GameType) -> Void
 
     var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(spacing: 24) {
-                    Text("Daily Puzzles")
-                        .font(.largeTitle.weight(.bold))
-                        .padding(.top, 40)
+        ScrollView {
+            VStack(spacing: 24) {
+                Text("Wuzzler")
+                    .font(.largeTitle.weight(.bold))
+                    .padding(.top, 40)
 
-                    ForEach(GameType.allCases) { game in
-                        GameCard(gameType: game, onTap: {
-                            onGameSelected(game)
-                        })
-                    }
-
-                    Spacer(minLength: 40)
+                ForEach(GameType.allCases) { game in
+                    GameCard(gameType: game, onTap: {
+                        onGameSelected(game)
+                    })
                 }
-                .padding(.horizontal, 20)
+
+                Spacer(minLength: 40)
             }
-            .background(Color(UIColor.systemGray6))
+            .padding(.horizontal, 20)
         }
+        .background(Color(UIColor.systemGray6))
     }
 }
 
@@ -80,7 +78,7 @@ fileprivate struct GameIconView: View {
 }
 
 // Diagone: square with diagonal line
-fileprivate struct DiagoneIconView: View {
+struct DiagoneIconView: View {
     let size: CGFloat
 
     var body: some View {
@@ -97,30 +95,43 @@ fileprivate struct DiagoneIconView: View {
     }
 }
 
-// RhymeAGrams: simple triangle
-fileprivate struct RhymeAGramsIconView: View {
+// RhymeAGrams: four stacked bars (1, 3, 5, 7)
+struct RhymeAGramsIconView: View {
     let size: CGFloat
 
     var body: some View {
-        Path { path in
-            path.move(to: CGPoint(x: size * 0.5, y: size * 0.12))
-            path.addLine(to: CGPoint(x: size * 0.88, y: size * 0.88))
-            path.addLine(to: CGPoint(x: size * 0.12, y: size * 0.88))
-            path.closeSubpath()
+        let barHeight = size * 0.14
+        let spacing = size * 0.06
+        let lineWidth = size * 0.04
+        let cornerRadius = barHeight * 0.3
+        let widths: [CGFloat] = [1, 3, 5, 7].map { CGFloat($0) / 7.0 * size * 0.85 }
+        VStack(spacing: spacing) {
+            ForEach(Array(widths.enumerated()), id: \.offset) { _, w in
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .stroke(Color.mainDiagonal, lineWidth: lineWidth)
+                    .frame(width: w, height: barHeight)
+            }
         }
-        .stroke(Color.mainDiagonal, style: StrokeStyle(lineWidth: 2.5, lineJoin: .round))
         .frame(width: size, height: size)
     }
 }
 
-// TumblePuns: simple circle
-fileprivate struct TumblePunsIconView: View {
+// TumblePuns: six circles in a ring
+struct TumblePunsIconView: View {
     let size: CGFloat
 
     var body: some View {
-        Circle()
-            .stroke(Color.mainDiagonal, lineWidth: 2.5)
-            .frame(width: size * 0.8, height: size * 0.8)
-            .frame(width: size, height: size)
+        let radius = size * 0.32
+        let dotSize = size * 0.22
+        ZStack {
+            ForEach(0..<6, id: \.self) { i in
+                let angle = Angle(degrees: Double(i) * 60 - 90)
+                Circle()
+                    .stroke(Color.mainDiagonal, lineWidth: size * 0.04)
+                    .frame(width: dotSize, height: dotSize)
+                    .offset(x: radius * cos(angle.radians), y: radius * sin(angle.radians))
+            }
+        }
+        .frame(width: size, height: size)
     }
 }

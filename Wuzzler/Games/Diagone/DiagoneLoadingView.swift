@@ -46,7 +46,7 @@ struct DiagoneLoadingView: View {
             .padding(.horizontal, 20)
 
             Spacer(minLength: 80)
-            GridIcon6x6(size: 84)
+            DiagoneIconView(size: 80)
 
             VStack(spacing: 6) {
                 Text(formattedDate)

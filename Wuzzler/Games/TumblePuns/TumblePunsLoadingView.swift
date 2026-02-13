@@ -47,9 +47,7 @@ struct TumblePunsLoadingView: View {
 
             Spacer(minLength: 80)
 
-            Image(systemName: "circle.grid.3x3.fill")
-                .font(.system(size: 84))
-                .foregroundColor(.primary)
+            TumblePunsIconView(size: 80)
 
             VStack(spacing: 6) {
                 Text(formattedDate)

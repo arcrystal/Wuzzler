@@ -110,13 +110,18 @@ enum RhymeAGramsPuzzleLibrary {
     }
 
     /// Loads puzzles from JSON file mapping "MM/DD/YYYY" -> puzzle data
+    private static var cache: [String: PuzzleData]?
+    private static var cacheLoaded = false
+
     static func loadPuzzleMap(resource: String = "rhymeagrams_puzzles", subdirectory: String? = nil) -> [String: PuzzleData]? {
+        if cacheLoaded { return cache }
         let bundle = Bundle.main
 
         // Try to load with specific name (avoids conflict with Diagone's puzzles.json)
         if let url = bundle.url(forResource: resource, withExtension: "json", subdirectory: subdirectory),
            let data = try? Data(contentsOf: url),
            let map = try? JSONDecoder().decode([String: PuzzleData].self, from: data) {
+            cache = map; cacheLoaded = true
             return map
         }
 
@@ -124,9 +129,11 @@ enum RhymeAGramsPuzzleLibrary {
         if let url = bundle.url(forResource: resource, withExtension: "json"),
            let data = try? Data(contentsOf: url),
            let map = try? JSONDecoder().decode([String: PuzzleData].self, from: data) {
+            cache = map; cacheLoaded = true
             return map
         }
 
+        cacheLoaded = true
         return nil
     }
 

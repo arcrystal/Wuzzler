@@ -46,9 +46,20 @@ fileprivate enum PuzzleBuilder {
 // MARK: - Puzzle Library Loader
 fileprivate enum PuzzleLibrary {
     struct Store: Decodable { let map: [String:[String]] }
+    private static var cache: [String:[String]]?
+    private static var cacheLoaded = false
+
     /// Loads a JSON dictionary mapping "MM/DD/YYYY" -> [six words].
     /// Supports bundled subdirectory + filename (default: Puzzles/puzzles.json).
     static func load(resource: String = "puzzles", subdirectory: String = "Puzzles") -> [String:[String]]? {
+        if cacheLoaded { return cache }
+        let result = _load(resource: resource, subdirectory: subdirectory)
+        cache = result
+        cacheLoaded = true
+        return result
+    }
+
+    private static func _load(resource: String, subdirectory: String) -> [String:[String]]? {
         let bundle = Bundle.main
 
         func decodeMap(from data: Data) -> [String:[String]]? {
@@ -285,6 +296,11 @@ public final class GameEngine: ObservableObject {
 
     /// The six horizontal target words for the current puzzle (row 0..5).
     public private(set) var puzzleRowWords: [String] = []
+
+    /// Pre-loads the puzzle JSON into memory so later init calls are instant.
+    public static func warmUp() {
+        _ = PuzzleLibrary.load()
+    }
 
     public init(configuration: PuzzleConfiguration = .defaultConfiguration()) {
         self.configuration = configuration

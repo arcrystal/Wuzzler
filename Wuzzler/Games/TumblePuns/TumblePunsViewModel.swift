@@ -94,11 +94,15 @@ public final class TumblePunsViewModel: ObservableObject {
         startDate = Date()
         saveDailyMeta(started: true)
         startTimer()
+        selectWord(0)
     }
 
     public func resume() {
         guard started && !finished else { return }
         startTimer()
+        if selectedWordIndex == nil && !isFinalAnswerSelected {
+            selectFirstIncompleteWord()
+        }
     }
 
     public func pause() {
@@ -146,6 +150,7 @@ public final class TumblePunsViewModel: ObservableObject {
         finalAnswer = engine.state.finalAnswer
         debouncedSave()
         checkSolved()
+        autoAdvanceAfterType()
     }
 
     public func deleteKey() {
@@ -153,6 +158,70 @@ public final class TumblePunsViewModel: ObservableObject {
         wordAnswers = engine.state.wordAnswers
         finalAnswer = engine.state.finalAnswer
         debouncedSave()
+        autoGoBackAfterDelete()
+    }
+
+    public func clearWord(at index: Int) {
+        engine.clearWord(at: index)
+        wordAnswers = engine.state.wordAnswers
+        selectWord(index)
+        debouncedSave()
+    }
+
+    private func selectFirstIncompleteWord() {
+        for i in 0..<4 {
+            if !correctWordIndices.contains(i) && wordAnswers[i].count < engine.puzzle.words[i].solution.count {
+                selectWord(i)
+                return
+            }
+        }
+        // All words complete, select final answer
+        let expectedFinalLength = engine.puzzle.answerPattern.filter { $0 == "_" }.count
+        if finalAnswer.count < expectedFinalLength {
+            selectFinalAnswer()
+        }
+    }
+
+    private func autoAdvanceAfterType() {
+        guard !finished else { return }
+        if let idx = selectedWordIndex {
+            let word = engine.puzzle.words[idx]
+            if wordAnswers[idx].count >= word.solution.count {
+                // Find next incomplete word
+                for next in (idx + 1)..<4 {
+                    if !correctWordIndices.contains(next) && wordAnswers[next].count < engine.puzzle.words[next].solution.count {
+                        selectWord(next)
+                        return
+                    }
+                }
+                // All words after are complete, go to final answer if needed
+                let expectedFinalLength = engine.puzzle.answerPattern.filter { $0 == "_" }.count
+                if finalAnswer.count < expectedFinalLength {
+                    selectFinalAnswer()
+                }
+            }
+        }
+    }
+
+    private func autoGoBackAfterDelete() {
+        guard !finished else { return }
+        if isFinalAnswerSelected && finalAnswer.isEmpty {
+            // Go back to last non-correct word
+            for prev in stride(from: 3, through: 0, by: -1) {
+                if !correctWordIndices.contains(prev) {
+                    selectWord(prev)
+                    return
+                }
+            }
+        } else if let idx = selectedWordIndex, wordAnswers[idx].isEmpty {
+            // Go back to previous non-correct word
+            for prev in stride(from: idx - 1, through: 0, by: -1) {
+                if !correctWordIndices.contains(prev) {
+                    selectWord(prev)
+                    return
+                }
+            }
+        }
     }
 
     private func debouncedSave() {
@@ -216,8 +285,15 @@ public final class TumblePunsViewModel: ObservableObject {
         }
     }
 
+    private lazy var feedbackGenerator: UINotificationFeedbackGenerator = {
+        let gen = UINotificationFeedbackGenerator()
+        gen.prepare()
+        return gen
+    }()
+
     private func triggerIncorrectFeedback() {
-        UINotificationFeedbackGenerator().notificationOccurred(.warning)
+        feedbackGenerator.notificationOccurred(.warning)
+        feedbackGenerator.prepare()
         withAnimation(.easeIn(duration: 0.12)) {
             shakeTrigger += 1
             showIncorrectFeedback = true

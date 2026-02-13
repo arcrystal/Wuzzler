@@ -15,7 +15,13 @@ struct AppCoordinatorView: View {
             case .splash:
                 SplashScreen()
                     .onAppear {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        // Preload all puzzle JSON files in the background
+                        DispatchQueue.global(qos: .userInitiated).async {
+                            GameEngine.warmUp()
+                            _ = RhymeAGramsPuzzleLibrary.loadPuzzleMap()
+                            _ = TumblePunsPuzzleLibrary.loadPuzzleMap()
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.75) {
                             withAnimation(.easeOut(duration: 0.4)) {
                                 route = .home
                             }
@@ -23,11 +29,15 @@ struct AppCoordinatorView: View {
                     }
             case .home:
                 HomeView(onGameSelected: { gameType in
-                    route = .game(gameType)
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        route = .game(gameType)
+                    }
                 })
             case .game(let gameType):
                 GameCoordinatorView(gameType: gameType, onBackToHome: {
-                    route = .home
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        route = .home
+                    }
                 })
             }
         }
@@ -36,64 +46,102 @@ struct AppCoordinatorView: View {
 
 // MARK: - Splash Screen
 struct SplashScreen: View {
-    @State private var logoScale: CGFloat = 0.8
-    @State private var logoOpacity: Double = 0
-    @State private var textOpacity: Double = 0
+    @State private var settled = false
+    @State private var tileOpacities: [Double] = Array(repeating: 0, count: 7)
+    @State private var sheenValues: [Double] = Array(repeating: 0, count: 7)
 
     var body: some View {
         ZStack {
-            // Blue background
             Color(red: 0.12, green: 0.35, blue: 0.65)
                 .ignoresSafeArea()
 
-            VStack(spacing: 24) {
-                // Animated logo - 6x6 grid with white diagonal
-                SplashGridIcon(size: 100)
-                    .scaleEffect(logoScale)
-                    .opacity(logoOpacity)
-
-                Text("Daily Puzzles")
-                    .font(.system(size: 32, weight: .bold, design: .rounded))
-                    .foregroundColor(.white)
-                    .opacity(textOpacity)
-            }
+            WuzzlerSplashLogo(settled: settled, tileOpacities: tileOpacities, sheenValues: sheenValues)
         }
         .onAppear {
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
-                logoScale = 1.0
-                logoOpacity = 1.0
+            // Phase 1: Tiles pop in one by one (staggered over ~0.7s)
+            for i in 0..<7 {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.7).delay(Double(i) * 0.08)) {
+                    tileOpacities[i] = 1.0
+                }
             }
-            withAnimation(.easeOut(duration: 0.5).delay(0.3)) {
-                textOpacity = 1.0
+            // Phase 2: Tiles settle into a row
+            withAnimation(.spring(response: 0.7, dampingFraction: 0.65).delay(0.8)) {
+                settled = true
+            }
+            // Phase 3: Sheen wave across tiles
+            let sheenStart = 1.6
+            for i in 0..<7 {
+                let tileDelay = sheenStart + Double(i) * 0.06
+                withAnimation(.easeIn(duration: 0.12).delay(tileDelay)) {
+                    sheenValues[i] = 1.0
+                }
+                withAnimation(.easeOut(duration: 0.18).delay(tileDelay + 0.12)) {
+                    sheenValues[i] = 0.0
+                }
             }
         }
     }
 }
 
-fileprivate struct SplashGridIcon: View {
-    let size: CGFloat
+fileprivate struct WuzzlerSplashLogo: View {
+    var settled: Bool
+    var tileOpacities: [Double]
+    var sheenValues: [Double]
+
+    private struct TileState {
+        let letter: String
+        // Scattered positions (relative to center)
+        let scatterX: CGFloat
+        let scatterY: CGFloat
+        let scatterRotation: Double
+        let scatterScale: CGFloat
+    }
+
+    private let tiles: [TileState] = [
+        TileState(letter: "W", scatterX: -80, scatterY: -100, scatterRotation: -25, scatterScale: 0.6),
+        TileState(letter: "U", scatterX: 50,  scatterY: -120, scatterRotation: 15,  scatterScale: 0.7),
+        TileState(letter: "Z", scatterX: 100, scatterY: -30,  scatterRotation: -20, scatterScale: 0.5),
+        TileState(letter: "Z", scatterX: -100,scatterY: 40,   scatterRotation: 30,  scatterScale: 0.65),
+        TileState(letter: "L", scatterX: -20, scatterY: 110,  scatterRotation: -10, scatterScale: 0.55),
+        TileState(letter: "E", scatterX: 90,  scatterY: 80,   scatterRotation: 22,  scatterScale: 0.7),
+        TileState(letter: "R", scatterX: -60, scatterY: -40,  scatterRotation: -18, scatterScale: 0.6),
+    ]
 
     var body: some View {
-        let cell = size / 6.0
-        VStack(spacing: 0) {
-            ForEach(0..<6, id: \.self) { r in
-                HStack(spacing: 0) {
-                    ForEach(0..<6, id: \.self) { c in
-                        let isMain = (r == c)
-                        Rectangle()
-                            .fill(isMain ? Color.white : Color.white.opacity(0.2))
-                            .overlay(
-                                Rectangle()
-                                    .stroke(isMain ? Color.black : Color.white.opacity(0.4), lineWidth: isMain ? 2 : 0.75)
-                            )
-                            .frame(width: cell, height: cell)
-                    }
-                }
+        let tileSize: CGFloat = 44
+        let spacing: CGFloat = 4
+        let totalWidth = CGFloat(tiles.count) * tileSize + CGFloat(tiles.count - 1) * spacing
+        let startX = -totalWidth / 2 + tileSize / 2
+
+        ZStack {
+            ForEach(Array(tiles.enumerated()), id: \.offset) { index, tile in
+                let settledX = startX + CGFloat(index) * (tileSize + spacing)
+
+                Text(tile.letter)
+                    .font(.system(size: tileSize * 0.55, weight: .bold, design: .rounded))
+                    .foregroundColor(Color(red: 0.12, green: 0.35, blue: 0.65))
+                    .frame(width: tileSize, height: tileSize)
+                    .background(
+                        RoundedRectangle(cornerRadius: tileSize * 0.18, style: .continuous)
+                            .fill(Color.white)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: tileSize * 0.18, style: .continuous)
+                            .stroke(Color.white.opacity(0.6), lineWidth: 1)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: tileSize * 0.18, style: .continuous)
+                            .fill(Color.white.opacity(index < sheenValues.count ? sheenValues[index] * 0.55 : 0))
+                    )
+                    .shadow(color: .black.opacity(0.25), radius: settled ? 3 : 6, x: 0, y: settled ? 2 : 4)
+                    .scaleEffect(settled ? 1.0 : tile.scatterScale)
+                    .rotationEffect(.degrees(settled ? 0 : tile.scatterRotation))
+                    .offset(
+                        x: settled ? settledX : tile.scatterX,
+                        y: settled ? 0 : tile.scatterY
+                    )
+                    .opacity(index < tileOpacities.count ? tileOpacities[index] : 0)
             }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.white.opacity(0.5), lineWidth: 1))
-        .frame(width: size, height: size)
-        .shadow(color: .black.opacity(0.3), radius: 10, x: 0, y: 5)
     }
 }

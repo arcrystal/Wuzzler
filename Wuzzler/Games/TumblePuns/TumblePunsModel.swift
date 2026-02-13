@@ -121,6 +121,11 @@ class TumblePunsEngine {
         }
     }
 
+    func clearWord(at index: Int) {
+        guard index >= 0 && index < 4 else { return }
+        state.wordAnswers[index] = ""
+    }
+
     func clearFinalAnswer() {
         state.finalAnswer = ""
     }
@@ -187,21 +192,28 @@ enum TumblePunsPuzzleLibrary {
         let answer: String
     }
 
+    private static var cache: [String: PuzzleData]?
+    private static var cacheLoaded = false
+
     static func loadPuzzleMap(resource: String = "tumblepuns_puzzles", subdirectory: String? = nil) -> [String: PuzzleData]? {
+        if cacheLoaded { return cache }
         let bundle = Bundle.main
 
         if let url = bundle.url(forResource: resource, withExtension: "json", subdirectory: subdirectory),
            let data = try? Data(contentsOf: url),
            let map = try? JSONDecoder().decode([String: PuzzleData].self, from: data) {
+            cache = map; cacheLoaded = true
             return map
         }
 
         if let url = bundle.url(forResource: resource, withExtension: "json"),
            let data = try? Data(contentsOf: url),
            let map = try? JSONDecoder().decode([String: PuzzleData].self, from: data) {
+            cache = map; cacheLoaded = true
             return map
         }
 
+        cacheLoaded = true
         return nil
     }
 

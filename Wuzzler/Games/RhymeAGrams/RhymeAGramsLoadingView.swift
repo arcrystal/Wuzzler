@@ -42,7 +42,7 @@ struct RhymeAGramsLoadingView: View {
 
             Spacer(minLength: 80)
 
-            PyramidIcon(size: 84)
+            RhymeAGramsIconView(size: 80)
 
             VStack(spacing: 6) {
                 Text(formattedDate)
