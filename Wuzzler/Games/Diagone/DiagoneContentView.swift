@@ -376,11 +376,14 @@ struct DiagoneContentView: View {
     // Simple layout: all chips in a row with small gaps, vertically centered.
     // Math is straightforward and guaranteed to fit.
 
-    /// Horizontal margin on each side of the chip pane
-    private let chipPaneMargin: CGFloat = 8
+    /// Horizontal margin on each side of the chip pane, proportional to screen width
+    private func chipPaneMargin(for width: CGFloat) -> CGFloat { width * 0.02 }
 
-    /// Gap between adjacent chips (in points)
-    private let chipGap: CGFloat = 1.5
+    /// Gap between adjacent chips, proportional to screen width
+    private func chipGap(for width: CGFloat) -> CGFloat { width * 0.004 }
+
+    /// Vertical spacing between the two chip rows, proportional to screen width
+    private func chipRowSpacing(for width: CGFloat) -> CGFloat { width * 0.02 }
 
     /// Tile size as fraction of cellSize (must match ChipView)
     private let tileFactor: CGFloat = 0.85
@@ -428,8 +431,8 @@ struct DiagoneContentView: View {
     }
 
     /// Computes cellSize that makes all chips fit exactly in availableWidth.
-    private func computeCellSize(availableWidth: CGFloat) -> CGFloat {
-        let totalGaps = 4 * chipGap  // 4 gaps between 5 chips
+    private func computeCellSize(availableWidth: CGFloat, gap: CGFloat) -> CGFloat {
+        let totalGaps = 4 * gap  // 4 gaps between 5 chips
         return (availableWidth - totalGaps) / totalWidthFactor
     }
 
@@ -445,7 +448,7 @@ struct DiagoneContentView: View {
 
     /// Computes x-positions for all 5 chips, given cellSize
     /// Gap is measured from 2nd letter of current chip to 1st letter of next chip
-    private func computeXPositions(cellSize: CGFloat) -> [CGFloat] {
+    private func computeXPositions(cellSize: CGFloat, gap: CGFloat) -> [CGFloat] {
         var positions: [CGFloat] = []
         var x: CGFloat = 0
         for L in 1...5 {
@@ -453,7 +456,7 @@ struct DiagoneContentView: View {
             // Advance by effective span (to 2nd letter for L>=2, or to end for L=1)
             x += effectiveSpan(L, cellSize: cellSize)
             if L < 5 {
-                x += chipGap
+                x += gap
             }
         }
         return positions
@@ -469,9 +472,12 @@ struct DiagoneContentView: View {
 
     @ViewBuilder
     private func chipPane(width: CGFloat) -> some View {
-        let availableWidth = width - 2 * chipPaneMargin
-        let cellSize = computeCellSize(availableWidth: availableWidth)
-        let xPositions = computeXPositions(cellSize: cellSize)
+        let margin = chipPaneMargin(for: width)
+        let gap = chipGap(for: width)
+        let rowSpacing = chipRowSpacing(for: width)
+        let availableWidth = width - 2 * margin
+        let cellSize = computeCellSize(availableWidth: availableWidth, gap: gap)
+        let xPositions = computeXPositions(cellSize: cellSize, gap: gap)
         let maxSpan = chipSpan(5, cellSize: cellSize)  // Height of tallest chip
 
         // Group pieces by length
@@ -494,7 +500,7 @@ struct DiagoneContentView: View {
             return chipRowAssignment[L - 1] ? sorted?.dropFirst().first : sorted?.first
         }
 
-        VStack(spacing: 8) {
+        VStack(spacing: rowSpacing) {
             chipRow(pieces: row1, cellSize: cellSize, xPositions: xPositions,
                     maxSpan: maxSpan, rowWidth: availableWidth)
             chipRow(pieces: row2, cellSize: cellSize, xPositions: xPositions,
@@ -532,7 +538,9 @@ struct DiagoneContentView: View {
 
     /// Helper to compute cellSize for the MainDiagonalInputView
     private func computeChipCellSize(totalWidth: CGFloat) -> CGFloat {
-        return computeCellSize(availableWidth: totalWidth - 2 * chipPaneMargin)
+        let margin = chipPaneMargin(for: totalWidth)
+        let gap = chipGap(for: totalWidth)
+        return computeCellSize(availableWidth: totalWidth - 2 * margin, gap: gap)
     }
 
 
