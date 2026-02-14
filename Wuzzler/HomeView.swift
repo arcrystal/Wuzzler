@@ -106,15 +106,28 @@ struct RhymeAGramsIconView: View {
     var color: Color = .rhymeAGramsAccent
 
     var body: some View {
-        let inset = size * 0.1
-        Path { path in
-            path.move(to: CGPoint(x: size * 0.5, y: inset))
-            path.addLine(to: CGPoint(x: size - inset, y: size - inset))
-            path.addLine(to: CGPoint(x: inset, y: size - inset))
-            path.closeSubpath()
-        }
-        .fill(color)
-        .frame(width: size, height: size)
+        RoundedTriangle(radius: size * 0.1)
+            .fill(color)
+            .frame(width: size, height: size)
+    }
+}
+
+private struct RoundedTriangle: Shape {
+    let radius: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        let inset = rect.width * 0.0
+        let top = CGPoint(x: rect.midX, y: inset)
+        let bottomRight = CGPoint(x: rect.maxX - inset, y: rect.maxY - inset)
+        let bottomLeft = CGPoint(x: inset, y: rect.maxY - inset)
+
+        var path = Path()
+        path.move(to: CGPoint(x: (top.x + bottomLeft.x) / 2, y: (top.y + bottomLeft.y) / 2))
+        path.addArc(tangent1End: top, tangent2End: bottomRight, radius: radius)
+        path.addArc(tangent1End: bottomRight, tangent2End: bottomLeft, radius: radius)
+        path.addArc(tangent1End: bottomLeft, tangent2End: top, radius: radius)
+        path.closeSubpath()
+        return path
     }
 }
 
