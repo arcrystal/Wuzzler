@@ -68,68 +68,73 @@ fileprivate struct GameIconView: View {
     var body: some View {
         switch gameType {
         case .diagone:
-            DiagoneIconView(size: 54)
+            DiagoneIconView(size: 54, color: gameType.accentColor)
         case .rhymeAGrams:
-            RhymeAGramsIconView(size: 54)
+            RhymeAGramsIconView(size: 54, color: gameType.accentColor)
         case .tumblePuns:
-            TumblePunsIconView(size: 54)
+            TumblePunsIconView(size: 54, color: gameType.accentColor)
         }
     }
 }
 
-// Diagone: square with diagonal line
+// Diagone: 3x3 grid of filled rounded squares
 struct DiagoneIconView: View {
     let size: CGFloat
+    var color: Color = .diagoneAccent
 
     var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: size * 0.12, style: .continuous)
-                .stroke(Color.mainDiagonal, lineWidth: 2.5)
-            Path { path in
-                path.move(to: CGPoint(x: size * 0.18, y: size * 0.18))
-                path.addLine(to: CGPoint(x: size * 0.82, y: size * 0.82))
+        let cellSize = size * 0.26
+        let gap = size * 0.07
+        VStack(spacing: gap) {
+            ForEach(0..<3, id: \.self) { _ in
+                HStack(spacing: gap) {
+                    ForEach(0..<3, id: \.self) { _ in
+                        RoundedRectangle(cornerRadius: cellSize * 0.2, style: .continuous)
+                            .fill(color)
+                            .frame(width: cellSize, height: cellSize)
+                    }
+                }
             }
-            .stroke(Color.mainDiagonal, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
         }
         .frame(width: size, height: size)
     }
 }
 
-// RhymeAGrams: four stacked bars (1, 3, 5, 7)
+// RhymeAGrams: filled triangle with rounded corners
 struct RhymeAGramsIconView: View {
     let size: CGFloat
+    var color: Color = .rhymeAGramsAccent
 
     var body: some View {
-        let barHeight = size * 0.14
-        let spacing = size * 0.06
-        let lineWidth = size * 0.04
-        let cornerRadius = barHeight * 0.3
-        let widths: [CGFloat] = [1, 3, 5, 7].map { CGFloat($0) / 7.0 * size * 0.85 }
-        VStack(spacing: spacing) {
-            ForEach(Array(widths.enumerated()), id: \.offset) { _, w in
-                RoundedRectangle(cornerRadius: cornerRadius)
-                    .stroke(Color.mainDiagonal, lineWidth: lineWidth)
-                    .frame(width: w, height: barHeight)
-            }
+        let inset = size * 0.1
+        Path { path in
+            path.move(to: CGPoint(x: size * 0.5, y: inset))
+            path.addLine(to: CGPoint(x: size - inset, y: size - inset))
+            path.addLine(to: CGPoint(x: inset, y: size - inset))
+            path.closeSubpath()
         }
+        .fill(color)
         .frame(width: size, height: size)
     }
 }
 
-// TumblePuns: six circles in a ring
+// TumblePuns: 3x3 grid of filled circles
 struct TumblePunsIconView: View {
     let size: CGFloat
+    var color: Color = .tumblePunsAccent
 
     var body: some View {
-        let radius = size * 0.32
-        let dotSize = size * 0.22
-        ZStack {
-            ForEach(0..<6, id: \.self) { i in
-                let angle = Angle(degrees: Double(i) * 60 - 90)
-                Circle()
-                    .stroke(Color.mainDiagonal, lineWidth: size * 0.04)
-                    .frame(width: dotSize, height: dotSize)
-                    .offset(x: radius * cos(angle.radians), y: radius * sin(angle.radians))
+        let dotSize = size * 0.26
+        let gap = size * 0.07
+        VStack(spacing: gap) {
+            ForEach(0..<3, id: \.self) { _ in
+                HStack(spacing: gap) {
+                    ForEach(0..<3, id: \.self) { _ in
+                        Circle()
+                            .fill(color)
+                            .frame(width: dotSize, height: dotSize)
+                    }
+                }
             }
         }
         .frame(width: size, height: size)

@@ -3,10 +3,21 @@ import SwiftUI
 struct TumblePunsView: View {
     @ObservedObject var viewModel: TumblePunsViewModel
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.gameAccent) private var gameAccent
     let onBackToHome: () -> Void
 
     @State private var showHub: Bool = true
     @State private var gameCleared: Bool = false
+    @State private var showTutorial: Bool = false
+
+    private var tutorialSteps: [TutorialStep] {
+        [
+            TutorialStep(icon: "circle.grid.3x3", title: "Welcome to TumblePuns", description: "Unscramble four jumbled words, then use the highlighted letters to solve a punny clue."),
+            TutorialStep(icon: "arrow.triangle.2.circlepath", title: "Unscramble Words", description: "Tap a word to select it, then type the correct spelling. Use the shuffle button to rearrange the scrambled letters for a fresh look."),
+            TutorialStep(icon: "paintbrush.pointed", title: "Shaded Letters", description: "Each solved word reveals its shaded letters. These special letters combine to form the final answer."),
+            TutorialStep(icon: "lightbulb", title: "Solve the Pun", description: "Read the definition clue, then unscramble the shaded letters to complete the punny final answer."),
+        ]
+    }
 
     /// For each word (4 total), stores the display position for each letter index.
     /// letterPositions[wordIndex][letterIndex] = position on circle (0..<letterCount)
@@ -96,6 +107,12 @@ struct TumblePunsView: View {
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, 40)
+
+                Button(action: { showTutorial = true }) {
+                    Label("How to Play", systemImage: "questionmark.circle")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundColor(gameAccent)
+                }
             }
 
             Spacer()
@@ -113,7 +130,7 @@ struct TumblePunsView: View {
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(Color.mainDiagonal)
+                            .background(gameAccent)
                             .cornerRadius(12)
                     }
 
@@ -142,7 +159,7 @@ struct TumblePunsView: View {
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(Color.mainDiagonal)
+                            .background(gameAccent)
                             .cornerRadius(12)
                     }
 
@@ -152,13 +169,13 @@ struct TumblePunsView: View {
                     }) {
                         Text("Clear Game")
                             .font(.headline)
-                            .foregroundColor(.mainDiagonal)
+                            .foregroundColor(gameAccent)
                             .frame(maxWidth: .infinity)
                             .padding()
                             .background(Color.clear)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.mainDiagonal, lineWidth: 2)
+                                    .stroke(gameAccent, lineWidth: 2)
                             )
                     }
                     .opacity(gameCleared ? 0.4 : 1.0)
@@ -167,13 +184,13 @@ struct TumblePunsView: View {
                     Button(action: onBackToHome) {
                         Text("Back to Home")
                             .font(.headline)
-                            .foregroundColor(.mainDiagonal)
+                            .foregroundColor(gameAccent)
                             .frame(maxWidth: .infinity)
                             .padding()
                             .background(Color.clear)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.mainDiagonal, lineWidth: 2)
+                                    .stroke(gameAccent, lineWidth: 2)
                             )
                     }
 
@@ -200,20 +217,20 @@ struct TumblePunsView: View {
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(Color.mainDiagonal)
+                            .background(gameAccent)
                             .cornerRadius(12)
                     }
 
                     Button(action: onBackToHome) {
                         Text("Back to Home")
                             .font(.headline)
-                            .foregroundColor(.mainDiagonal)
+                            .foregroundColor(gameAccent)
                             .frame(maxWidth: .infinity)
                             .padding()
                             .background(Color.clear)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.mainDiagonal, lineWidth: 2)
+                                    .stroke(gameAccent, lineWidth: 2)
                             )
                     }
                 }
@@ -222,6 +239,11 @@ struct TumblePunsView: View {
             .padding(.bottom, 40)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .overlay {
+            if showTutorial {
+                TutorialOverlay(steps: tutorialSteps, accentColor: gameAccent, onDismiss: { showTutorial = false })
+            }
+        }
     }
 
     // MARK: - Game View
@@ -341,7 +363,7 @@ struct TumblePunsView: View {
                         .overlay(
                             Circle()
                                 .strokeBorder(
-                                    Color.mainDiagonal.opacity(0.35),
+                                    gameAccent.opacity(0.35),
                                     lineWidth: 1.5
                                 )
                         )
@@ -372,16 +394,16 @@ struct TumblePunsView: View {
 
                     Text(displayLetter)
                         .font(.system(size: 15, weight: .bold))
-                        .foregroundColor(isCorrect ? .green : .primary)
+                        .foregroundColor(.primary)
                         .frame(width: 22, height: 28)
                         .background(
                             RoundedRectangle(cornerRadius: 4)
-                                .fill(isShaded ? Color.mainDiagonal.opacity(isSelected ? 0.45 : 0.3) : Color.boardCell)
+                                .fill(isShaded ? gameAccent.opacity(isSelected ? 0.45 : 0.3) : Color.boardCell)
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: 4)
                                 .strokeBorder(
-                                    isCorrect ? .green : (isSelected ? Color.mainDiagonal : Color.gray.opacity(0.4)),
+                                    isSelected ? gameAccent : Color.gray.opacity(0.4),
                                     lineWidth: isSelected ? 2 : 1
                                 )
                         )
@@ -464,12 +486,12 @@ struct TumblePunsView: View {
                             .frame(width: 34, height: 42)
                             .background(
                                 RoundedRectangle(cornerRadius: 5)
-                                    .fill(Color.mainDiagonal.opacity(0.3))
+                                    .fill(gameAccent.opacity(0.3))
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: 5)
                                     .strokeBorder(
-                                        viewModel.isFinalAnswerSelected ? Color.mainDiagonal : Color.gray.opacity(0.4),
+                                        viewModel.isFinalAnswerSelected ? gameAccent : Color.gray.opacity(0.4),
                                         lineWidth: viewModel.isFinalAnswerSelected ? 2 : 1
                                     )
                             )

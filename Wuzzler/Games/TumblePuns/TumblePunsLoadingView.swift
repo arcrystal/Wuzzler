@@ -5,6 +5,7 @@ struct TumblePunsLoadingView: View {
     let onStart: () -> Void
     let onBack: () -> Void
 
+    @Environment(\.gameAccent) private var gameAccent
     @AppStorage("tutorial_seen_tumblepuns") private var tutorialSeen = false
     @State private var showTutorial = false
 
@@ -88,7 +89,7 @@ struct TumblePunsLoadingView: View {
             if showTutorial {
                 TutorialOverlay(
                     steps: tutorialSteps,
-                    accentColor: .mainDiagonal,
+                    accentColor: gameAccent,
                     onDismiss: {
                         tutorialSeen = true
                         showTutorial = false

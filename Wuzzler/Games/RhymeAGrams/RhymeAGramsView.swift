@@ -9,10 +9,20 @@ private extension UIApplication {
 struct RhymeAGramsView: View {
     @StateObject var viewModel: RhymeAGramsViewModel
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.gameAccent) private var gameAccent
     let onBackToHome: () -> Void
 
     @State private var showHub: Bool = true
     @State private var gameCleared: Bool = false
+    @State private var showTutorial: Bool = false
+
+    private var tutorialSteps: [TutorialStep] {
+        [
+            TutorialStep(icon: "triangle", title: "Welcome to RhymeAGrams", description: "Find four 4-letter rhyming words hidden in the pyramid of letters. All four words rhyme!"),
+            TutorialStep(icon: "hand.tap", title: "Tap to Spell", description: "Tap letters in the pyramid or use the keyboard to spell each word. Every letter is used exactly once across all four words."),
+            TutorialStep(icon: "arrow.right.arrow.left", title: "Navigate Words", description: "Tap any answer row to select it. Words auto-advance when filled. Backspace moves to the previous word if the current one is empty."),
+        ]
+    }
 
     private enum HubMode { case notStarted, inProgress, completed }
     private var hubMode: HubMode {
@@ -73,12 +83,18 @@ struct RhymeAGramsView: View {
                     .font(.largeTitle)
                     .fontWeight(.bold)
 
-                Text("Find four 4-letter words from a pyramid of letters")
+                Text("Find four 4-letter rhyming words from a pyramid of letters")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, 40)
+
+                Button(action: { showTutorial = true }) {
+                    Label("How to Play", systemImage: "questionmark.circle")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundColor(gameAccent)
+                }
             }
 
             Spacer()
@@ -97,7 +113,7 @@ struct RhymeAGramsView: View {
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(Color.mainDiagonal)
+                            .background(gameAccent)
                             .cornerRadius(12)
                     }
 
@@ -127,7 +143,7 @@ struct RhymeAGramsView: View {
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(Color.mainDiagonal)
+                            .background(gameAccent)
                             .cornerRadius(12)
                     }
 
@@ -138,13 +154,13 @@ struct RhymeAGramsView: View {
                     }) {
                         Text("Clear Game")
                             .font(.headline)
-                            .foregroundColor(.mainDiagonal)
+                            .foregroundColor(gameAccent)
                             .frame(maxWidth: .infinity)
                             .padding()
                             .background(Color.clear)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.mainDiagonal, lineWidth: 2)
+                                    .stroke(gameAccent, lineWidth: 2)
                             )
                     }
                     .opacity(gameCleared ? 0.4 : 1.0)
@@ -153,13 +169,13 @@ struct RhymeAGramsView: View {
                     Button(action: onBackToHome) {
                         Text("Back to Home")
                             .font(.headline)
-                            .foregroundColor(.mainDiagonal)
+                            .foregroundColor(gameAccent)
                             .frame(maxWidth: .infinity)
                             .padding()
                             .background(Color.clear)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.mainDiagonal, lineWidth: 2)
+                                    .stroke(gameAccent, lineWidth: 2)
                             )
                     }
 
@@ -187,20 +203,20 @@ struct RhymeAGramsView: View {
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(Color.mainDiagonal)
+                            .background(gameAccent)
                             .cornerRadius(12)
                     }
 
                     Button(action: onBackToHome) {
                         Text("Back to Home")
                             .font(.headline)
-                            .foregroundColor(.mainDiagonal)
+                            .foregroundColor(gameAccent)
                             .frame(maxWidth: .infinity)
                             .padding()
                             .background(Color.clear)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.mainDiagonal, lineWidth: 2)
+                                    .stroke(gameAccent, lineWidth: 2)
                             )
                     }
                 }
@@ -210,6 +226,11 @@ struct RhymeAGramsView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Color.boardCell.opacity(0.2).ignoresSafeArea())
+        .overlay {
+            if showTutorial {
+                TutorialOverlay(steps: tutorialSteps, accentColor: gameAccent, onDismiss: { showTutorial = false })
+            }
+        }
     }
 
     // MARK: - Game View
@@ -322,6 +343,7 @@ struct RhymeAGramsView: View {
 
 // MARK: - Pyramid View
 private struct PyramidView: View {
+    @Environment(\.gameAccent) private var gameAccent
     let letters: [String]
     let usedPositions: [[Bool]]
     var onLetterTap: ((String) -> Void)? = nil
@@ -338,7 +360,7 @@ private struct PyramidView: View {
                             .frame(width: 36, height: 36)
                             .background(
                                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                    .fill(Color.mainDiagonal.opacity(0.3))
+                                    .fill(gameAccent.opacity(0.3))
                             )
                             .contentShape(Rectangle())
                             .opacity(isUsed ? 0.25 : 1.0)
@@ -383,6 +405,7 @@ private struct AnswerSlotsView: View {
 }
 
 private struct AnswerSlotRow: View {
+    @Environment(\.gameAccent) private var gameAccent
     let answer: String
     let isSelected: Bool
     let isCorrect: Bool
@@ -424,11 +447,11 @@ private struct AnswerSlotRow: View {
 
     private func cellBackground(index: Int, isCursor: Bool) -> Color {
         if isSolved && isCorrect {
-            return Color.mainDiagonal.opacity(0.3)
+            return gameAccent.opacity(0.3)
         } else if isCursor {
-            return Color.mainDiagonal.opacity(0.18)
+            return gameAccent.opacity(0.18)
         } else if isSelected {
-            return Color.mainDiagonal.opacity(0.08)
+            return gameAccent.opacity(0.08)
         } else {
             return Color.boardCell
         }
@@ -436,7 +459,7 @@ private struct AnswerSlotRow: View {
 
     private var borderColor: Color {
         if isSelected {
-            return Color.mainDiagonal
+            return gameAccent
         } else {
             return Color.gridLine
         }

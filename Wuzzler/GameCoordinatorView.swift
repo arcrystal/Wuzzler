@@ -5,14 +5,17 @@ struct GameCoordinatorView: View {
     let onBackToHome: () -> Void
 
     var body: some View {
-        switch gameType {
-        case .diagone:
-            DiagoneCoordinatorView(onBackToHome: onBackToHome)
-        case .rhymeAGrams:
-            RhymeAGramsCoordinatorView(onBackToHome: onBackToHome)
-        case .tumblePuns:
-            TumblePunsCoordinatorView(onBackToHome: onBackToHome)
+        Group {
+            switch gameType {
+            case .diagone:
+                DiagoneCoordinatorView(onBackToHome: onBackToHome)
+            case .rhymeAGrams:
+                RhymeAGramsCoordinatorView(onBackToHome: onBackToHome)
+            case .tumblePuns:
+                TumblePunsCoordinatorView(onBackToHome: onBackToHome)
+            }
         }
+        .environment(\.gameAccent, gameType.accentColor)
     }
 }
 

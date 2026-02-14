@@ -5,6 +5,7 @@ struct DiagoneLoadingView: View {
     let onStart: () -> Void
     let onBack: () -> Void
 
+    @Environment(\.gameAccent) private var gameAccent
     @AppStorage("tutorial_seen_diagone") private var tutorialSeen = false
     @State private var showTutorial = false
 
@@ -87,7 +88,7 @@ struct DiagoneLoadingView: View {
             if showTutorial {
                 TutorialOverlay(
                     steps: tutorialSteps,
-                    accentColor: .mainDiagonal,
+                    accentColor: gameAccent,
                     onDismiss: {
                         tutorialSeen = true
                         showTutorial = false
@@ -117,6 +118,7 @@ struct DiagoneLoadingView: View {
 }
 
 fileprivate struct GridIcon6x6: View {
+    @Environment(\.gameAccent) private var gameAccent
     let size: CGFloat
     var body: some View {
         let cell = size / 6.0
@@ -126,7 +128,7 @@ fileprivate struct GridIcon6x6: View {
                     ForEach(0..<6, id: \.self) { c in
                         let isMain = (r == c)
                         Rectangle()
-                            .fill(isMain ? Color.mainDiagonal : Color.boardCell)
+                            .fill(isMain ? gameAccent : Color.boardCell)
                             .overlay(Rectangle().stroke(Color.gridLine, lineWidth: 0.75))
                             .frame(width: cell, height: cell)
                     }

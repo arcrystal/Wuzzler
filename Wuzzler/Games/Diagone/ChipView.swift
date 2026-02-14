@@ -6,6 +6,7 @@ import UniformTypeIdentifiers
 /// touch. Chips scale up and spread apart while dragging for better visibility.
 struct ChipView: View {
     @EnvironmentObject private var viewModel: GameViewModel
+    @Environment(\.gameAccent) private var gameAccent
     /// The piece this chip represents. Contains the letters and identifier.
     let piece: GamePiece
     /// Size of one board cell. Controls the size of the chip's letters.

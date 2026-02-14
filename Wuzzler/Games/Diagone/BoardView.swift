@@ -14,6 +14,7 @@ private struct BoardFrameKey: PreferenceKey {
 /// emits callbacks through drop delegates when pieces are dropped.
 struct BoardView: View {
     @EnvironmentObject private var viewModel: GameViewModel
+    @Environment(\.gameAccent) private var gameAccent
     /// Optional row index to highlight during the win animation. When non‑nil
     /// the specified row is tinted with the accent colour.
     var highlightRow: Int?
@@ -22,11 +23,12 @@ struct BoardView: View {
     var body: some View {
         GeometryReader { geo in
             let side: CGFloat = min(geo.size.width, geo.size.height)
-            let cellSize: CGFloat = side / 6.0
+            let gap: CGFloat = side * 0.005
+            let cellSize: CGFloat = (side - gap * 5) / 6.0
 
             ZStack {
                 // Grid + letters layer
-                GridLayer(cellSize: cellSize)
+                GridLayer(cellSize: cellSize, gap: gap)
                     .frame(width: side, height: side)
                     .background(boardFrameReporter)
                     .modifier(Shake(animatableData: CGFloat(viewModel.shakeTrigger)))
@@ -69,7 +71,9 @@ struct BoardView: View {
 
 fileprivate struct GridLayer: View {
     @EnvironmentObject private var viewModel: GameViewModel
+    @Environment(\.gameAccent) private var gameAccent
     let cellSize: CGFloat
+    let gap: CGFloat
     
     @ViewBuilder
     private func makeCell(isMain: Bool,
@@ -77,15 +81,16 @@ fileprivate struct GridLayer: View {
                           letter: String,
                           cellSize: CGFloat,
                           delay: Double) -> some View {
-        let baseRect = Rectangle()
-            .fill(isMain ? Color.mainDiagonal : Color.boardCell)
+        let cornerRadius = cellSize * 0.12
+        let baseRect = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            .fill(isMain ? gameAccent : Color.boardCell)
         let stroked = baseRect
-            .overlay(Rectangle().stroke(Color.gridLine, lineWidth: 1))
+            .overlay(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous).stroke(Color.gridLine, lineWidth: 1))
         let withHover = stroked
             .overlay(
                 Group {
                     if isHover {
-                        Rectangle().fill(Color.hoverHighlight).allowsHitTesting(false)
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous).fill(Color.hoverHighlight).allowsHitTesting(false)
                     }
                 }
             )
@@ -129,9 +134,9 @@ fileprivate struct GridLayer: View {
             return []
         }()
 
-        return VStack(spacing: 0) {
+        return VStack(spacing: gap) {
             ForEach(0..<6, id: \.self) { r in
-                HStack(spacing: 0) {
+                HStack(spacing: gap) {
                     ForEach(0..<6, id: \.self) { c in
                         let id = Cell(row: r, col: c)
                         // Precompute simple values to reduce expression complexity

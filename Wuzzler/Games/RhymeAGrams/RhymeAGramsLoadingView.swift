@@ -5,6 +5,7 @@ struct RhymeAGramsLoadingView: View {
     let onStart: () -> Void
     let onBack: () -> Void
 
+    @Environment(\.gameAccent) private var gameAccent
     @AppStorage("tutorial_seen_rhymeagrams") private var tutorialSeen = false
     @State private var showTutorial = false
 
@@ -13,7 +14,7 @@ struct RhymeAGramsLoadingView: View {
             TutorialStep(
                 icon: "triangle",
                 title: "Welcome to RhymeAGrams",
-                description: "Find four 4-letter words hidden in the pyramid of letters. All four words rhyme!"
+                description: "Find four 4-letter rhyming words hidden in the pyramid of letters. All four words rhyme!"
             ),
             TutorialStep(
                 icon: "hand.tap",
@@ -49,7 +50,7 @@ struct RhymeAGramsLoadingView: View {
                     .font(.system(size: 36, weight: .heavy, design: .serif))
                     .multilineTextAlignment(.center)
 
-                Text("Find four 4-letter words from a pyramid of letters")
+                Text("Find four 4-letter rhyming words from a pyramid of letters")
                     .font(.title3)
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.secondary)
@@ -83,7 +84,7 @@ struct RhymeAGramsLoadingView: View {
             if showTutorial {
                 TutorialOverlay(
                     steps: tutorialSteps,
-                    accentColor: .mainDiagonal,
+                    accentColor: gameAccent,
                     onDismiss: {
                         tutorialSeen = true
                         showTutorial = false
@@ -113,13 +114,14 @@ struct RhymeAGramsLoadingView: View {
 }
 
 fileprivate struct PyramidIcon: View {
+    @Environment(\.gameAccent) private var gameAccent
     let size: CGFloat
 
     var body: some View {
         ZStack {
             // Triangle background
             Triangle()
-                .fill(Color.mainDiagonal.opacity(0.2))
+                .fill(gameAccent.opacity(0.2))
                 .frame(width: size, height: size * 0.866)  // Equilateral triangle ratio
 
             // Letter rows to suggest the game

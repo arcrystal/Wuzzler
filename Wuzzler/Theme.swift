@@ -1,5 +1,18 @@
 import SwiftUI
 
+// MARK: - Game Accent Environment Key
+
+private struct GameAccentColorKey: EnvironmentKey {
+    static let defaultValue: Color = .diagoneAccent
+}
+
+extension EnvironmentValues {
+    var gameAccent: Color {
+        get { self[GameAccentColorKey.self] }
+        set { self[GameAccentColorKey.self] = newValue }
+    }
+}
+
 /// Defines colour tokens used throughout the application. Centralising the palette
 /// makes it easy to adjust appearance for light and dark modes or customise
 /// themes via a configuration file in the future. Colours are exposed as
@@ -19,14 +32,37 @@ extension Color {
             return trait.userInterfaceStyle == .dark ? UIColor(red: 0.32, green: 0.32, blue: 0.35, alpha: 1.0) : UIColor(red: 0.84, green: 0.84, blue: 0.86, alpha: 1.0)
         })
     }
-    /// Colour for the main diagonal cells. Based on the New York Times blue
-    /// (#1E5AA7) described in the problem statement. Slightly lighter in dark
-    /// mode to aid contrast.
-    static var mainDiagonal: Color {
+    /// Colour for the main diagonal cells — kept as the Diagone blue for
+    /// backward compatibility. New code should prefer `gameAccent`.
+    static var mainDiagonal: Color { diagoneAccent }
+
+    // MARK: - Per-Game Accent Colors
+
+    /// Diagone: a rich but calm blue
+    static var diagoneAccent: Color {
         Color(UIColor { trait in
-            return trait.userInterfaceStyle == .dark ? UIColor(red: 0.28, green: 0.6, blue: 0.8, alpha: 0.7) : UIColor(red: 0.12, green: 0.35, blue: 0.65, alpha: 0.7)
+            return trait.userInterfaceStyle == .dark
+                ? UIColor(red: 0.35, green: 0.65, blue: 0.88, alpha: 1.0)
+                : UIColor(red: 0.15, green: 0.40, blue: 0.70, alpha: 1.0)
         })
     }
+    /// RhymeAGrams: a fresh, leafy green
+    static var rhymeAGramsAccent: Color {
+        Color(UIColor { trait in
+            return trait.userInterfaceStyle == .dark
+                ? UIColor(red: 0.30, green: 0.75, blue: 0.50, alpha: 1.0)
+                : UIColor(red: 0.16, green: 0.55, blue: 0.35, alpha: 1.0)
+        })
+    }
+    /// TumblePuns: a warm, playful red-coral
+    static var tumblePunsAccent: Color {
+        Color(UIColor { trait in
+            return trait.userInterfaceStyle == .dark
+                ? UIColor(red: 0.90, green: 0.42, blue: 0.40, alpha: 1.0)
+                : UIColor(red: 0.78, green: 0.25, blue: 0.22, alpha: 1.0)
+        })
+    }
+
     /// Colour used to tint rows during the win animation. A warm yellow
     /// (#F9C23C) reminiscent of the NYT accent. Slightly desaturated in dark
     /// mode.

@@ -13,6 +13,7 @@ private extension UIApplication {
 struct DiagoneContentView: View {
     @StateObject var viewModel: GameViewModel
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.gameAccent) private var gameAccent
     let onBackToHome: () -> Void
 
     @MainActor
@@ -30,6 +31,16 @@ struct DiagoneContentView: View {
 
     @State private var showHub: Bool = true
     @State private var gameCleared: Bool = false
+    @State private var showTutorial: Bool = false
+
+    private var tutorialSteps: [TutorialStep] {
+        [
+            TutorialStep(icon: "square.grid.3x3", title: "Welcome to Diagone", description: "Place diagonal word chips onto a 6\u{00d7}6 board to spell six horizontal words."),
+            TutorialStep(icon: "hand.draw", title: "Drag & Drop", description: "Drag chips from the tray onto the board. Each chip fills a diagonal of matching length."),
+            TutorialStep(icon: "arrow.uturn.backward", title: "Rearrange Freely", description: "Drag a placed chip to a different diagonal, or drag it off the board to remove it."),
+            TutorialStep(icon: "character.textbox", title: "Complete the Diagonal", description: "Once all chips are placed, type letters into the highlighted main diagonal to finish the puzzle."),
+        ]
+    }
     /// Random row assignment for chip pairs: true = first-by-id in row 1, false = swapped
     @State private var chipRowAssignment: [Bool] = (0..<5).map { _ in Bool.random() }
 
@@ -233,6 +244,12 @@ struct DiagoneContentView: View {
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, 40)
+
+                Button(action: { showTutorial = true }) {
+                    Label("How to Play", systemImage: "questionmark.circle")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundColor(gameAccent)
+                }
             }
 
             Spacer()
@@ -251,7 +268,7 @@ struct DiagoneContentView: View {
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(Color.mainDiagonal)
+                            .background(gameAccent)
                             .cornerRadius(12)
                     }
 
@@ -281,7 +298,7 @@ struct DiagoneContentView: View {
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(Color.mainDiagonal)
+                            .background(gameAccent)
                             .cornerRadius(12)
                     }
 
@@ -292,13 +309,13 @@ struct DiagoneContentView: View {
                     }) {
                         Text("Clear Game")
                             .font(.headline)
-                            .foregroundColor(.mainDiagonal)
+                            .foregroundColor(gameAccent)
                             .frame(maxWidth: .infinity)
                             .padding()
                             .background(Color.clear)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.mainDiagonal, lineWidth: 2)
+                                    .stroke(gameAccent, lineWidth: 2)
                             )
                     }
                     .opacity(gameCleared ? 0.4 : 1.0)
@@ -307,13 +324,13 @@ struct DiagoneContentView: View {
                     Button(action: onBackToHome) {
                         Text("Back to Home")
                             .font(.headline)
-                            .foregroundColor(.mainDiagonal)
+                            .foregroundColor(gameAccent)
                             .frame(maxWidth: .infinity)
                             .padding()
                             .background(Color.clear)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.mainDiagonal, lineWidth: 2)
+                                    .stroke(gameAccent, lineWidth: 2)
                             )
                     }
 
@@ -345,20 +362,20 @@ struct DiagoneContentView: View {
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(Color.mainDiagonal)
+                            .background(gameAccent)
                             .cornerRadius(12)
                     }
 
                     Button(action: onBackToHome) {
                         Text("Back to Home")
                             .font(.headline)
-                            .foregroundColor(.mainDiagonal)
+                            .foregroundColor(gameAccent)
                             .frame(maxWidth: .infinity)
                             .padding()
                             .background(Color.clear)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.mainDiagonal, lineWidth: 2)
+                                    .stroke(gameAccent, lineWidth: 2)
                             )
                     }
                 }
@@ -368,6 +385,11 @@ struct DiagoneContentView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Color.boardCell.opacity(0.2).ignoresSafeArea())
+        .overlay {
+            if showTutorial {
+                TutorialOverlay(steps: tutorialSteps, accentColor: gameAccent, onDismiss: { showTutorial = false })
+            }
+        }
     }
 
     // MARK: - Chip Pane Layout

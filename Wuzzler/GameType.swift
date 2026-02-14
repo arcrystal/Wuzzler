@@ -30,4 +30,12 @@ enum GameType: String, Identifiable, CaseIterable {
         case .tumblePuns: return "Unscramble words and solve the punny definition"
         }
     }
+
+    var accentColor: Color {
+        switch self {
+        case .diagone: return .diagoneAccent
+        case .rhymeAGrams: return .rhymeAGramsAccent
+        case .tumblePuns: return .tumblePunsAccent
+        }
+    }
 }
