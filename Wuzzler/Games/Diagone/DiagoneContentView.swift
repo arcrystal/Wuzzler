@@ -33,8 +33,8 @@ struct DiagoneGameView: View {
                         chipPane(width: width)
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
-                    // Keyboard (shown only when all pieces placed and not finished)
-                    if viewModel.showMainInput && !viewModel.finished {
+                    // Keyboard (shown when all pieces placed, or game finished)
+                    if viewModel.showMainInput || viewModel.finished {
                         Spacer().frame(maxHeight: 40)
                         KeyboardView(
                             onKeyTap: { key in
@@ -45,6 +45,7 @@ struct DiagoneGameView: View {
                             }
                         )
                         .padding(.horizontal)
+                        .opacity(viewModel.finished ? 0.5 : 1.0)
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
                 }

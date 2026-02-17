@@ -9,6 +9,17 @@ struct TumblePunsGameView: View {
     /// For each word (4 total), stores the display position for each letter index.
     @State private var letterPositions: [[Int]] = []
 
+    /// Compute the wave delay for a letter at a given absolute position in the sequence.
+    /// All words and the final answer start their wave simultaneously.
+    /// Letters within each word/answer are staggered by 0.08s.
+    private func waveDelay(wordIndex: Int, letterIndex: Int) -> Double {
+        0.05 + 0.08 * Double(letterIndex)
+    }
+
+    private func finalAnswerWaveDelay(letterIndex: Int) -> Double {
+        0.05 + 0.08 * Double(letterIndex)
+    }
+
     /// Initialize letter positions with random shuffles for each word
     func initializeLetterPositions() {
         guard letterPositions.isEmpty else { return }
@@ -118,7 +129,7 @@ struct TumblePunsGameView: View {
                     let userAnswer = viewModel.wordAnswers[index]
                     let displayLetter = letterIndex < userAnswer.count ? String(userAnswer[userAnswer.index(userAnswer.startIndex, offsetBy: letterIndex)]) : ""
                     let isShaded = word.shadedIndices.contains(letterIndex + 1)
-                    let waveDelay = 0.05 + 0.35 * Double(index) + 0.08 * Double(letterIndex)
+                    let waveDelay = waveDelay(wordIndex: index, letterIndex: letterIndex)
 
                     Text(displayLetter)
                         .font(.system(size: 15, weight: .bold))
@@ -213,7 +224,7 @@ struct TumblePunsGameView: View {
                         let letterIndex = pattern.prefix(offset + 1).filter { $0 == "_" }.count - 1
                         let userAnswer = viewModel.finalAnswer
                         let displayLetter = letterIndex < userAnswer.count ? String(userAnswer[userAnswer.index(userAnswer.startIndex, offsetBy: letterIndex)]) : ""
-                        let finalDelay = 0.05 + 0.35 * 4.0 + 0.12 * Double(letterIndex)
+                        let finalDelay = finalAnswerWaveDelay(letterIndex: letterIndex)
 
                         Text(displayLetter)
                             .font(.system(size: 20, weight: .bold))

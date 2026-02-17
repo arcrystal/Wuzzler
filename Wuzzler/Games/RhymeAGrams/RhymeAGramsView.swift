@@ -38,17 +38,20 @@ struct RhymeAGramsGameView: View {
                 Spacer()
 
                 // Keyboard
-                if !viewModel.finished {
-                    KeyboardView(
-                        onKeyTap: { key in
+                KeyboardView(
+                    onKeyTap: { key in
+                        if !viewModel.finished {
                             viewModel.typeKey(key)
-                        },
-                        onDelete: {
+                        }
+                    },
+                    onDelete: {
+                        if !viewModel.finished {
                             viewModel.deleteKey()
                         }
-                    )
-                    .padding(.horizontal)
-                }
+                    }
+                )
+                .padding(.horizontal)
+                .opacity(viewModel.finished ? 0.5 : 1.0)
 
                 Spacer(minLength: 20)
             }

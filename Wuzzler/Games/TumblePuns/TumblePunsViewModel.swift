@@ -13,9 +13,12 @@ final class TumblePunsViewModel: GameFlowViewModel {
     private(set) var engine: TumblePunsEngine
 
     override var winAnimationDuration: TimeInterval {
+        let perLetter = 0.08
+        // All words + final answer wave simultaneously; longest one determines duration
+        let maxWordLen = engine.puzzle.words.map(\.solution.count).max() ?? 0
         let finalLetterCount = engine.puzzle.answerPattern.filter { $0 == "_" }.count
-        // Final answer last cell: 0.05 + 0.35*4 + 0.12*(finalLetterCount-1)
-        let lastDelay = 0.05 + 0.35 * 4.0 + 0.12 * Double(finalLetterCount - 1)
+        let maxLen = max(maxWordLen, finalLetterCount)
+        let lastDelay = 0.05 + perLetter * Double(max(maxLen - 1, 0))
         // + spring settle ~0.50s
         return lastDelay + 0.50
     }
