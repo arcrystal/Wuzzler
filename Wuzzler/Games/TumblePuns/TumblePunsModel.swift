@@ -217,6 +217,12 @@ enum TumblePunsPuzzleLibrary {
         return nil
     }
 
+    /// Returns all date keys (MM/dd/yyyy format) that have puzzles available.
+    static func availableDateKeys() -> Set<String> {
+        guard let map = loadPuzzleMap() else { return [] }
+        return Set(map.keys)
+    }
+
     static func loadPuzzle(for date: Date) -> TumblePunsPuzzle {
         let formatter = DateFormatter()
         formatter.dateFormat = "MM/dd/yyyy"

@@ -38,7 +38,7 @@ struct TumblePunsGameView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            GameHeader(viewModel: viewModel, gameName: "TumblePuns", onPause: onPause)
+            GameHeader(viewModel: viewModel, gameName: "TumblePun", onPause: onPause)
 
             ScrollView {
                 VStack(spacing: 24) {

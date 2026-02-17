@@ -10,8 +10,8 @@ enum GameType: String, Identifiable, CaseIterable {
     var displayName: String {
         switch self {
         case .diagone: return "Diagone"
-        case .rhymeAGrams: return "RhymeAGrams"
-        case .tumblePuns: return "TumblePuns"
+        case .rhymeAGrams: return "RhymeAGram"
+        case .tumblePuns: return "TumblePun"
         }
     }
 

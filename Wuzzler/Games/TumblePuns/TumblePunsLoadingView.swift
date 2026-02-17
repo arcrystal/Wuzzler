@@ -13,7 +13,7 @@ struct TumblePunsLoadingView: View {
         [
             TutorialStep(
                 icon: "circle.grid.3x3",
-                title: "Welcome to TumblePuns",
+                title: "Welcome to TumblePun",
                 description: "Unscramble four jumbled words, then use the highlighted letters to solve a punny clue."
             ),
             TutorialStep(
@@ -78,7 +78,7 @@ struct TumblePunsLoadingView: View {
 
             VStack(spacing: 4) {
                 Text(numberString).font(.subheadline).foregroundStyle(.secondary)
-                Text("Edited by Diagone Team").font(.subheadline).foregroundStyle(.secondary)
+                Text("Edited by the Wuzzler team").font(.subheadline).foregroundStyle(.secondary)
             }
             .padding(.bottom, 24)
         }

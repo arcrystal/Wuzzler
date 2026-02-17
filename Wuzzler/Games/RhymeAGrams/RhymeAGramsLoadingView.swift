@@ -13,7 +13,7 @@ struct RhymeAGramsLoadingView: View {
         [
             TutorialStep(
                 icon: "triangle",
-                title: "Welcome to RhymeAGrams",
+                title: "Welcome to RhymeAGram",
                 description: "Find four 4-letter rhyming words hidden in the pyramid of letters. All four words rhyme!"
             ),
             TutorialStep(
@@ -73,7 +73,7 @@ struct RhymeAGramsLoadingView: View {
 
             VStack(spacing: 4) {
                 Text(numberString).font(.subheadline).foregroundStyle(.secondary)
-                Text("Edited by Diagone Team").font(.subheadline).foregroundStyle(.secondary)
+                Text("Edited by the Wuzzler team").font(.subheadline).foregroundStyle(.secondary)
             }
             .padding(.bottom, 24)
         }

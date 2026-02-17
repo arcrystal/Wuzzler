@@ -2,17 +2,18 @@ import SwiftUI
 
 struct GameCoordinatorView: View {
     let gameType: GameType
+    let puzzleDate: Date
     let onBackToHome: () -> Void
 
     var body: some View {
         Group {
             switch gameType {
             case .diagone:
-                DiagoneCoordinatorView(onBackToHome: onBackToHome)
+                DiagoneCoordinatorView(puzzleDate: puzzleDate, onBackToHome: onBackToHome)
             case .rhymeAGrams:
-                RhymeAGramsCoordinatorView(onBackToHome: onBackToHome)
+                RhymeAGramsCoordinatorView(puzzleDate: puzzleDate, onBackToHome: onBackToHome)
             case .tumblePuns:
-                TumblePunsCoordinatorView(onBackToHome: onBackToHome)
+                TumblePunsCoordinatorView(puzzleDate: puzzleDate, onBackToHome: onBackToHome)
             }
         }
         .environment(\.gameAccent, gameType.accentColor)
@@ -23,16 +24,23 @@ struct GameCoordinatorView: View {
 private struct DiagoneCoordinatorView: View {
     enum Route { case loading, playing }
 
+    let puzzleDate: Date
     let onBackToHome: () -> Void
     @State private var route: Route = .loading
-    @StateObject private var viewModel = GameViewModel(engine: GameEngine(puzzleDate: Date()))
+    @StateObject private var viewModel: GameViewModel
+
+    init(puzzleDate: Date, onBackToHome: @escaping () -> Void) {
+        self.puzzleDate = puzzleDate
+        self.onBackToHome = onBackToHome
+        _viewModel = StateObject(wrappedValue: GameViewModel(puzzleDate: puzzleDate))
+    }
 
     var body: some View {
         Group {
             switch route {
             case .loading:
                 DiagoneLoadingView(
-                    date: Date(),
+                    date: puzzleDate,
                     onStart: {
                         route = .playing
                     },
@@ -78,16 +86,23 @@ private struct DiagoneCoordinatorView: View {
 private struct RhymeAGramsCoordinatorView: View {
     enum Route { case loading, playing }
 
+    let puzzleDate: Date
     let onBackToHome: () -> Void
     @State private var route: Route = .loading
-    @StateObject private var viewModel = RhymeAGramsViewModel()
+    @StateObject private var viewModel: RhymeAGramsViewModel
+
+    init(puzzleDate: Date, onBackToHome: @escaping () -> Void) {
+        self.puzzleDate = puzzleDate
+        self.onBackToHome = onBackToHome
+        _viewModel = StateObject(wrappedValue: RhymeAGramsViewModel(puzzleDate: puzzleDate))
+    }
 
     var body: some View {
         Group {
             switch route {
             case .loading:
                 RhymeAGramsLoadingView(
-                    date: Date(),
+                    date: puzzleDate,
                     onStart: {
                         route = .playing
                     },
@@ -96,11 +111,11 @@ private struct RhymeAGramsCoordinatorView: View {
             case .playing:
                 GameFlowView(
                     viewModel: viewModel,
-                    gameName: "RhymeAGrams",
+                    gameName: "RhymeAGram",
                     gameDescription: "Find four 4-letter rhyming words from a pyramid of letters",
                     iconView: RhymeAGramsIconView(size: 80),
                     tutorialSteps: [
-                        TutorialStep(icon: "triangle", title: "Welcome to RhymeAGrams", description: "Find four 4-letter rhyming words hidden in the pyramid of letters. All four words rhyme!"),
+                        TutorialStep(icon: "triangle", title: "Welcome to RhymeAGram", description: "Find four 4-letter rhyming words hidden in the pyramid of letters. All four words rhyme!"),
                         TutorialStep(icon: "hand.tap", title: "Tap to Spell", description: "Tap letters in the pyramid or use the keyboard to spell each word. Every letter is used exactly once across all four words."),
                         TutorialStep(icon: "arrow.right.arrow.left", title: "Navigate Words", description: "Tap any answer row to select it. Words auto-advance when filled. Backspace moves to the previous word if the current one is empty."),
                     ],
@@ -128,16 +143,23 @@ private struct RhymeAGramsCoordinatorView: View {
 private struct TumblePunsCoordinatorView: View {
     enum Route { case loading, playing }
 
+    let puzzleDate: Date
     let onBackToHome: () -> Void
     @State private var route: Route = .loading
-    @StateObject private var viewModel = TumblePunsViewModel()
+    @StateObject private var viewModel: TumblePunsViewModel
+
+    init(puzzleDate: Date, onBackToHome: @escaping () -> Void) {
+        self.puzzleDate = puzzleDate
+        self.onBackToHome = onBackToHome
+        _viewModel = StateObject(wrappedValue: TumblePunsViewModel(puzzleDate: puzzleDate))
+    }
 
     var body: some View {
         Group {
             switch route {
             case .loading:
                 TumblePunsLoadingView(
-                    date: Date(),
+                    date: puzzleDate,
                     onStart: {
                         route = .playing
                     },
@@ -146,11 +168,11 @@ private struct TumblePunsCoordinatorView: View {
             case .playing:
                 GameFlowView(
                     viewModel: viewModel,
-                    gameName: "TumblePuns",
+                    gameName: "TumblePun",
                     gameDescription: "Unscramble words and solve the punny definition",
                     iconView: TumblePunsIconView(size: 80),
                     tutorialSteps: [
-                        TutorialStep(icon: "circle.grid.3x3", title: "Welcome to TumblePuns", description: "Unscramble four jumbled words, then use the highlighted letters to solve a punny clue."),
+                        TutorialStep(icon: "circle.grid.3x3", title: "Welcome to TumblePun", description: "Unscramble four jumbled words, then use the highlighted letters to solve a punny clue."),
                         TutorialStep(icon: "arrow.triangle.2.circlepath", title: "Unscramble Words", description: "Tap a word to select it, then type the correct spelling. Use the shuffle button to rearrange the scrambled letters for a fresh look."),
                         TutorialStep(icon: "paintbrush.pointed", title: "Shaded Letters", description: "Each solved word reveals its shaded letters. These special letters combine to form the final answer."),
                         TutorialStep(icon: "lightbulb", title: "Solve the Pun", description: "Read the definition clue, then unscramble the shaded letters to complete the punny final answer."),

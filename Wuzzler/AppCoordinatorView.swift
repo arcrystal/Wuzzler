@@ -4,7 +4,7 @@ struct AppCoordinatorView: View {
     enum Route {
         case splash
         case home
-        case game(GameType)
+        case game(GameType, Date)
     }
 
     @State private var route: Route = .splash
@@ -28,13 +28,13 @@ struct AppCoordinatorView: View {
                         }
                     }
             case .home:
-                HomeView(onGameSelected: { gameType in
+                HomeView(onGameSelected: { gameType, date in
                     withAnimation(.easeInOut(duration: 0.25)) {
-                        route = .game(gameType)
+                        route = .game(gameType, date)
                     }
                 })
-            case .game(let gameType):
-                GameCoordinatorView(gameType: gameType, onBackToHome: {
+            case .game(let gameType, let date):
+                GameCoordinatorView(gameType: gameType, puzzleDate: date, onBackToHome: {
                     withAnimation(.easeInOut(duration: 0.25)) {
                         route = .home
                     }

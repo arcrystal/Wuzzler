@@ -23,12 +23,12 @@ final class TumblePunsViewModel: GameFlowViewModel {
         return lastDelay + 0.50
     }
 
-    init(date: Date = Date()) {
-        let puzzle = TumblePunsPuzzleLibrary.loadPuzzle(for: date)
+    init(puzzleDate: Date = Date()) {
+        let puzzle = TumblePunsPuzzleLibrary.loadPuzzle(for: puzzleDate)
         self.engine = TumblePunsEngine(puzzle: puzzle)
-        super.init(storageKeyPrefix: "tumblepuns", gameType: .tumblePuns)
+        super.init(storageKeyPrefix: "tumblepuns", gameType: .tumblePuns, puzzleDate: puzzleDate)
 
-        // Restore game state if today's meta indicates we started today
+        // Restore game state if meta indicates we started this puzzle
         if started, let data = loadSavedState(),
            let savedState = try? JSONDecoder().decode(TumblePunsState.self, from: data) {
             self.engine = TumblePunsEngine(puzzle: puzzle, state: savedState)

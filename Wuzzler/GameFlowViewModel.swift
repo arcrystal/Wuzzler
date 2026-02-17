@@ -26,12 +26,31 @@ class GameFlowViewModel: ObservableObject {
     // MARK: - Required Subclass Properties
     let storageKeyPrefix: String
     let gameType: GameType
+    let puzzleDate: Date
 
     /// Exact time from wave trigger to last bounce settling.
     /// Subclasses should compute this from their animation parameters.
     open var winAnimationDuration: TimeInterval { 1.0 }
 
-    var storageKey: String { "\(storageKeyPrefix)_state" }
+    /// Whether this is an archive (non-today) puzzle.
+    var isArchivePuzzle: Bool {
+        !Calendar.current.isDateInToday(puzzleDate)
+    }
+
+    private static let dateKeyFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.calendar = Calendar(identifier: .gregorian)
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = TimeZone(secondsFromGMT: 0)
+        f.dateFormat = "yyyy-MM-dd"
+        return f
+    }()
+
+    var puzzleDateString: String {
+        Self.dateKeyFormatter.string(from: puzzleDate)
+    }
+
+    var storageKey: String { "\(storageKeyPrefix)_state_\(puzzleDateString)" }
 
     // MARK: - DailyMeta Persistence
 
@@ -44,13 +63,7 @@ class GameFlowViewModel: ObservableObject {
     }
 
     var metaKey: String {
-        let fmt = DateFormatter()
-        fmt.calendar = Calendar(identifier: .gregorian)
-        fmt.locale = Locale(identifier: "en_US_POSIX")
-        fmt.timeZone = TimeZone(secondsFromGMT: 0)
-        fmt.dateFormat = "yyyy-MM-dd"
-        let day = fmt.string(from: Date())
-        return "\(storageKeyPrefix)_meta_\(day)"
+        "\(storageKeyPrefix)_meta_\(puzzleDateString)"
     }
 
     func loadDailyMeta() -> DailyMeta? {
@@ -75,9 +88,22 @@ class GameFlowViewModel: ObservableObject {
 
     // MARK: - Init
 
-    init(storageKeyPrefix: String, gameType: GameType) {
+    init(storageKeyPrefix: String, gameType: GameType, puzzleDate: Date = Date()) {
         self.storageKeyPrefix = storageKeyPrefix
         self.gameType = gameType
+        self.puzzleDate = puzzleDate
+
+        // Migration: if puzzleDate is today and legacy key has data but new key doesn't, migrate
+        if Calendar.current.isDateInToday(puzzleDate) {
+            let legacyKey = "\(storageKeyPrefix)_state"
+            let newKey = "\(storageKeyPrefix)_state_\(Self.dateKeyFormatter.string(from: puzzleDate))"
+            if UserDefaults.standard.data(forKey: legacyKey) != nil &&
+               UserDefaults.standard.data(forKey: newKey) == nil {
+                let data = UserDefaults.standard.data(forKey: legacyKey)
+                UserDefaults.standard.set(data, forKey: newKey)
+                UserDefaults.standard.removeObject(forKey: legacyKey)
+            }
+        }
 
         let meta = self.loadDailyMeta()
         if let meta = meta {

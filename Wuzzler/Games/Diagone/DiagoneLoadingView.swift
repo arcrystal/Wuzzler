@@ -77,7 +77,7 @@ struct DiagoneLoadingView: View {
 
             VStack(spacing: 4) {
                 Text(numberString).font(.subheadline).foregroundStyle(.secondary)
-                Text("Edited by Diagone Team").font(.subheadline).foregroundStyle(.secondary)
+                Text("Edited by the Wuzzler team").font(.subheadline).foregroundStyle(.secondary)
             }
             .padding(.bottom, 24)
         }

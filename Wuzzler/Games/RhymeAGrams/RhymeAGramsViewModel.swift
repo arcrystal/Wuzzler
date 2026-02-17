@@ -16,12 +16,12 @@ final class RhymeAGramsViewModel: GameFlowViewModel {
         0.98 + 0.50
     }
 
-    init(date: Date = Date()) {
-        let puzzle = RhymeAGramsPuzzleLibrary.loadPuzzle(for: date)
+    init(puzzleDate: Date = Date()) {
+        let puzzle = RhymeAGramsPuzzleLibrary.loadPuzzle(for: puzzleDate)
         self.engine = RhymeAGramsEngine(puzzle: puzzle)
-        super.init(storageKeyPrefix: "rhymeagrams", gameType: .rhymeAGrams)
+        super.init(storageKeyPrefix: "rhymeagrams", gameType: .rhymeAGrams, puzzleDate: puzzleDate)
 
-        // Restore game state if today's meta indicates we started today
+        // Restore game state if meta indicates we started this puzzle
         if started, let data = loadSavedState(),
            let savedState = try? JSONDecoder().decode(RhymeAGramsState.self, from: data) {
             self.engine = RhymeAGramsEngine(puzzle: puzzle, state: savedState)

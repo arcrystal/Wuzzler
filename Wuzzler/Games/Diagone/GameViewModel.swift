@@ -21,12 +21,13 @@ final class GameViewModel: GameFlowViewModel {
 
     private var winWaveTask: Task<Void, Never>?
 
-    init(engine: GameEngine = GameEngine(puzzleDate: Date())) {
+    init(puzzleDate: Date = Date()) {
+        let engine = GameEngine(puzzleDate: puzzleDate)
         self.engine = engine
-        super.init(storageKeyPrefix: "diagone", gameType: .diagone)
+        super.init(storageKeyPrefix: "diagone", gameType: .diagone, puzzleDate: puzzleDate)
 
-        // Only restore board state if today's meta indicates we started today.
-        if started, let restored = Self.loadSavedBoardState(for: engine.configuration) {
+        // Only restore board state if meta indicates we started this puzzle.
+        if started, let restored = Self.loadSavedBoardState(for: engine.configuration, storageKey: storageKey) {
             engine.restore(restored)
             let allPlaced = engine.state.targets.allSatisfy { $0.pieceId != nil }
             self.showMainInput = allPlaced
@@ -161,8 +162,8 @@ final class GameViewModel: GameFlowViewModel {
 
     // MARK: - Board Persistence
 
-    private static func loadSavedBoardState(for configuration: PuzzleConfiguration) -> GameState? {
-        guard let data = UserDefaults.standard.data(forKey: "diagone_state") else { return nil }
+    private static func loadSavedBoardState(for configuration: PuzzleConfiguration, storageKey: String) -> GameState? {
+        guard let data = UserDefaults.standard.data(forKey: storageKey) else { return nil }
         do {
             let state = try JSONDecoder().decode(GameState.self, from: data)
             if state.targets.count == configuration.diagonals.count - 1 && state.pieces.count == configuration.pieceLetters.count {

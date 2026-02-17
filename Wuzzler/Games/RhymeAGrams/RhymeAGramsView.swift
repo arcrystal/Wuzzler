@@ -7,7 +7,7 @@ struct RhymeAGramsGameView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            GameHeader(viewModel: viewModel, gameName: "RhymeAGrams", onPause: onPause)
+            GameHeader(viewModel: viewModel, gameName: "RhymeAGram", onPause: onPause)
 
             VStack(spacing: 20) {
                 Spacer()

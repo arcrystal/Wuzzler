@@ -302,6 +302,12 @@ public final class GameEngine: ObservableObject {
         _ = PuzzleLibrary.load()
     }
 
+    /// Returns all date keys (MM/dd/yyyy format) that have puzzles available.
+    public static func availableDateKeys() -> Set<String> {
+        guard let map = PuzzleLibrary.load() else { return [] }
+        return Set(map.keys)
+    }
+
     public init(configuration: PuzzleConfiguration = .defaultConfiguration()) {
         self.configuration = configuration
         let state = GameEngine.createInitialState(configuration: configuration)

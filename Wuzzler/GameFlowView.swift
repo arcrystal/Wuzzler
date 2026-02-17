@@ -41,6 +41,13 @@ struct GameFlowView<GameContent: View, IconView: View, VM: GameFlowViewModel>: V
     @State private var showMilestone: Bool = false
     @State private var milestoneStreak: Int = 0
 
+    private var archiveDateLabel: String {
+        let fmt = DateFormatter()
+        fmt.dateStyle = .medium
+        fmt.timeStyle = .none
+        return fmt.string(from: viewModel.puzzleDate)
+    }
+
     private enum HubMode { case notStarted, inProgress, completed }
     private var hubMode: HubMode {
         if viewModel.finished {
@@ -178,7 +185,7 @@ struct GameFlowView<GameContent: View, IconView: View, VM: GameFlowViewModel>: V
                     }
 
                 case .inProgress:
-                    Text(gameCleared ? "Game cleared." : "You're in the middle of today's puzzle.")
+                    Text(gameCleared ? "Game cleared." : (viewModel.isArchivePuzzle ? "You're in the middle of this puzzle." : "You're in the middle of today's puzzle."))
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -245,7 +252,7 @@ struct GameFlowView<GameContent: View, IconView: View, VM: GameFlowViewModel>: V
                             .foregroundColor(gameAccent)
                     }
 
-                    Text("Check back tomorrow for a new puzzle!")
+                    Text(viewModel.isArchivePuzzle ? archiveDateLabel : "Check back tomorrow for a new puzzle!")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -256,7 +263,7 @@ struct GameFlowView<GameContent: View, IconView: View, VM: GameFlowViewModel>: V
                         showHub = false
                         viewModel.runWinSequence()
                     }) {
-                        Text("View Today's Puzzle")
+                        Text(viewModel.isArchivePuzzle ? "View This Puzzle" : "View Today's Puzzle")
                             .font(.headline)
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)

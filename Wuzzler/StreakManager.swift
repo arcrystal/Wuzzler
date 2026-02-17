@@ -111,6 +111,39 @@ enum StreakManager {
         }
     }
 
+    // MARK: - Puzzle Status (for Archive)
+
+    enum PuzzleStatus {
+        case notStarted
+        case inProgress(elapsed: TimeInterval)
+        case completed(time: TimeInterval)
+    }
+
+    static func puzzleStatus(game: GameType, day: String) -> PuzzleStatus {
+        let prefix: String
+        switch game {
+        case .diagone: prefix = "diagone"
+        case .rhymeAGrams: prefix = "rhymeagrams"
+        case .tumblePuns: prefix = "tumblepuns"
+        }
+        let key = "\(prefix)_meta_\(day)"
+        guard let data = UserDefaults.standard.data(forKey: key),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return .notStarted
+        }
+        let finished = json["finished"] as? Bool ?? false
+        let elapsed = json["elapsedTime"] as? Double ?? 0
+        let finishTime = json["finishTime"] as? Double ?? 0
+        if finished {
+            return .completed(time: finishTime)
+        }
+        let started = json["started"] as? Bool ?? false
+        if started {
+            return .inProgress(elapsed: elapsed)
+        }
+        return .notStarted
+    }
+
     // MARK: - Internals
 
     private static let fmt: DateFormatter = {

@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct HomeView: View {
-    let onGameSelected: (GameType) -> Void
+    let onGameSelected: (GameType, Date) -> Void
     @State private var showMenu = false
     @State private var progress = StreakManager.todayProgress()
     @State private var streakInfo = StreakManager.streakInfo()
@@ -35,8 +35,10 @@ struct HomeView: View {
 
                 // Game Cards
                 ForEach(GameType.allCases) { game in
-                    GameCard(gameType: game, progress: progress, onTap: {
-                        onGameSelected(game)
+                    GameCardWithArchive(gameType: game, progress: progress, onTap: {
+                        onGameSelected(game, Date())
+                    }, onArchiveDateSelected: { date in
+                        onGameSelected(game, date)
                     })
                 }
 
@@ -235,15 +237,40 @@ fileprivate struct GameCard: View {
                     .foregroundColor(.secondary)
             }
             .padding(20)
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Color(UIColor.systemBackground))
-            )
-            .shadow(radius: 2, y: 1)
+            .background(Color(UIColor.systemBackground))
         }
         .buttonStyle(.plain)
         .accessibilityLabel("\(gameType.displayName)\(isTodayCompleted ? ", completed" : "")")
         .accessibilityHint(gameType.description)
+    }
+}
+
+// MARK: - Game Card + Archive Row
+
+fileprivate struct GameCardWithArchive: View {
+    let gameType: GameType
+    let progress: StreakManager.DailyProgress
+    let onTap: () -> Void
+    let onArchiveDateSelected: (Date) -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Game card with bottom corners unrounded
+            GameCard(gameType: gameType, progress: progress, onTap: onTap)
+                .clipShape(UnevenRoundedRectangle(
+                    topLeadingRadius: 16, bottomLeadingRadius: 0,
+                    bottomTrailingRadius: 0, topTrailingRadius: 16
+                ))
+
+            // Archive row with top corners unrounded
+            ArchiveRowView(gameType: gameType, onDateSelected: onArchiveDateSelected)
+                .background(Color(UIColor.systemBackground))
+                .clipShape(UnevenRoundedRectangle(
+                    topLeadingRadius: 0, bottomLeadingRadius: 16,
+                    bottomTrailingRadius: 16, topTrailingRadius: 0
+                ))
+        }
+        .shadow(radius: 2, y: 1)
     }
 }
 
