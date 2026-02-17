@@ -21,7 +21,7 @@ struct AppCoordinatorView: View {
                             _ = RhymeAGramsPuzzleLibrary.loadPuzzleMap()
                             _ = TumblePunsPuzzleLibrary.loadPuzzleMap()
                         }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.75) {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
                             withAnimation(.easeOut(duration: 0.4)) {
                                 route = .home
                             }

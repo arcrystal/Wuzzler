@@ -1,43 +1,16 @@
 import SwiftUI
 
-struct TumblePunsView: View {
+/// Game-specific content for TumblePuns. Wrapped by GameFlowView in the coordinator.
+struct TumblePunsGameView: View {
     @ObservedObject var viewModel: TumblePunsViewModel
-    @Environment(\.scenePhase) private var scenePhase
     @Environment(\.gameAccent) private var gameAccent
-    let onBackToHome: () -> Void
-
-    @State private var showHub: Bool = true
-    @State private var gameCleared: Bool = false
-    @State private var showTutorial: Bool = false
-    @State private var showShareSheet: Bool = false
-    @State private var shareText: String = ""
-
-    private var tutorialSteps: [TutorialStep] {
-        [
-            TutorialStep(icon: "circle.grid.3x3", title: "Welcome to TumblePuns", description: "Unscramble four jumbled words, then use the highlighted letters to solve a punny clue."),
-            TutorialStep(icon: "arrow.triangle.2.circlepath", title: "Unscramble Words", description: "Tap a word to select it, then type the correct spelling. Use the shuffle button to rearrange the scrambled letters for a fresh look."),
-            TutorialStep(icon: "paintbrush.pointed", title: "Shaded Letters", description: "Each solved word reveals its shaded letters. These special letters combine to form the final answer."),
-            TutorialStep(icon: "lightbulb", title: "Solve the Pun", description: "Read the definition clue, then unscramble the shaded letters to complete the punny final answer."),
-        ]
-    }
+    let onPause: () -> Void
 
     /// For each word (4 total), stores the display position for each letter index.
-    /// letterPositions[wordIndex][letterIndex] = position on circle (0..<letterCount)
     @State private var letterPositions: [[Int]] = []
 
-    private enum HubMode { case notStarted, inProgress, completed }
-    private var hubMode: HubMode {
-        if viewModel.finished {
-            return .completed
-        } else if viewModel.started || gameCleared {
-            return .inProgress
-        } else {
-            return .notStarted
-        }
-    }
-
     /// Initialize letter positions with random shuffles for each word
-    private func initializeLetterPositions() {
+    func initializeLetterPositions() {
         guard letterPositions.isEmpty else { return }
         letterPositions = viewModel.puzzle.words.map { word in
             Array(0..<word.scrambled.count).shuffled()
@@ -53,218 +26,8 @@ struct TumblePunsView: View {
     }
 
     var body: some View {
-        ZStack {
-            Color.boardCell.opacity(0.2)
-                .ignoresSafeArea()
-
-            if showHub {
-                startHub
-            } else {
-                gameView
-            }
-        }
-        .onAppear {
-            initializeLetterPositions()
-            if !viewModel.started {
-                // Coming from loading screen - start the game and go directly to game
-                viewModel.startGame()
-                showHub = false
-            } else {
-                // Returning to paused or completed game - show hub
-                showHub = true
-            }
-        }
-        .onChange(of: scenePhase) { _, phase in
-            if phase == .background || phase == .inactive {
-                if viewModel.started && !viewModel.finished {
-                    viewModel.pause()
-                    showHub = true
-                }
-            }
-        }
-        .onChange(of: viewModel.finished) { _, finished in
-            if finished {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                    showHub = true
-                }
-            }
-        }
-    }
-
-    // MARK: - Start Hub
-    private var startHub: some View {
         VStack(spacing: 0) {
-        
-            VStack(spacing: 16) {
-                Spacer()
-                TumblePunsIconView(size: 80)
-
-                Text("TumblePuns")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-
-                Text("Unscramble words and solve the punny definition")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, 40)
-
-                Button(action: { showTutorial = true }) {
-                    Label("How to Play", systemImage: "questionmark.circle")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundColor(gameAccent)
-                }
-            }
-
-            Spacer()
-
-            // Bottom content - state-specific
-            VStack(spacing: 16) {
-                switch hubMode {
-                case .notStarted:
-                    Button(action: {
-                        viewModel.startGame()
-                        showHub = false
-                    }) {
-                        Text("Play")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(gameAccent)
-                            .cornerRadius(12)
-                    }
-
-                case .inProgress:
-                    Text(gameCleared ? "Game cleared." : "You're in the middle of today's puzzle.")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    Text(viewModel.elapsedTimeString)
-                        .font(.system(size: 28, weight: .heavy, design: .rounded))
-                        .monospacedDigit()
-
-                    Button(action: {
-                        if gameCleared {
-                            gameCleared = false
-                            viewModel.startGame()
-                        } else {
-                            viewModel.resume()
-                        }
-                        showHub = false
-                    }) {
-                        Text(gameCleared ? "Play" : "Resume")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(gameAccent)
-                            .cornerRadius(12)
-                    }
-
-                    Button(action: {
-                        viewModel.clearGame()
-                        gameCleared = true
-                    }) {
-                        Text("Clear Game")
-                            .font(.headline)
-                            .foregroundColor(gameAccent)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.clear)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(gameAccent, lineWidth: 2)
-                            )
-                    }
-                    .opacity(gameCleared ? 0.4 : 1.0)
-                    .disabled(gameCleared)
-
-                    Button(action: onBackToHome) {
-                        Text("Back to Home")
-                            .font(.headline)
-                            .foregroundColor(gameAccent)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.clear)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(gameAccent, lineWidth: 2)
-                            )
-                    }
-
-                case .completed:
-                    Text("Great job!")
-                        .font(.title3.weight(.semibold))
-
-                    Text("Time: \(String(format: "%02d:%02d", Int(viewModel.finishTime) / 60, Int(viewModel.finishTime) % 60))")
-                        .font(.system(size: 28, weight: .heavy, design: .rounded))
-                        .monospacedDigit()
-
-                    Button {
-                        let time = String(format: "%d:%02d", Int(viewModel.finishTime) / 60, Int(viewModel.finishTime) % 60)
-                        shareText = "Wuzzler — TumblePuns\nSolved in \(time)!"
-                        showShareSheet = true
-                    } label: {
-                        Label("Share Results", systemImage: "square.and.arrow.up")
-                            .font(.subheadline.weight(.medium))
-                            .foregroundColor(gameAccent)
-                    }
-
-                    Text("Check back tomorrow for a new puzzle!")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    Button(action: {
-                        showHub = false
-                        viewModel.runWinSequence()
-                    }) {
-                        Text("View Today's Puzzle")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(gameAccent)
-                            .cornerRadius(12)
-                    }
-
-                    Button(action: onBackToHome) {
-                        Text("Back to Home")
-                            .font(.headline)
-                            .foregroundColor(gameAccent)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.clear)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(gameAccent, lineWidth: 2)
-                            )
-                    }
-                }
-            }
-            .padding(.horizontal, 40)
-            .padding(.bottom, 40)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .overlay {
-            if showTutorial {
-                TutorialOverlay(steps: tutorialSteps, accentColor: gameAccent, onDismiss: { showTutorial = false })
-            }
-        }
-        .sheet(isPresented: $showShareSheet) {
-            ShareActivityView(items: [shareText])
-        }
-    }
-
-    // MARK: - Game View
-    private var gameView: some View {
-        VStack(spacing: 0) {
-            headerView
+            GameHeader(viewModel: viewModel, gameName: "TumblePuns", onPause: onPause)
 
             ScrollView {
                 VStack(spacing: 24) {
@@ -284,56 +47,8 @@ struct TumblePunsView: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
-    }
-
-    // MARK: - Header
-    private var headerView: some View {
-        HStack {
-            Button(action: {
-                viewModel.pause()
-                showHub = true
-            }) {
-                Label("Back", systemImage: "chevron.backward")
-                    .font(.headline)
-            }
-
-            Spacer()
-
-            Text("TumblePuns")
-                .font(.headline)
-
-            Spacer()
-
-            if viewModel.started && !viewModel.finished {
-                HStack(spacing: 8) {
-                    Text(viewModel.elapsedTimeString)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .monospacedDigit()
-                    Button {
-                        viewModel.pause()
-                        showHub = true
-                    } label: {
-                        Image(systemName: "pause.fill")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
-                    .accessibilityLabel("Pause Game")
-                }
-                .frame(width: 75, alignment: .trailing)
-            } else if viewModel.started && viewModel.finished {
-                Text(viewModel.elapsedTimeString)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .monospacedDigit()
-                    .frame(width: 75, alignment: .trailing)
-            } else {
-                Color.clear.frame(width: 75)
-            }
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 16)
-        .background(Color.boardCell.opacity(0.1))
+        .background(Color.boardCell.opacity(0.2).ignoresSafeArea())
+        .onAppear { initializeLetterPositions() }
     }
 
     // MARK: - Words Grid
@@ -359,9 +74,7 @@ struct TumblePunsView: View {
         let positions = index < letterPositions.count ? letterPositions[index] : Array(0..<letterCount)
 
         return VStack(spacing: 10) {
-            // Scrambled letters arranged in a circle with shuffle button
             ZStack {
-                // Letter circles
                 ForEach(Array(word.scrambled.enumerated()), id: \.offset) { letterIdx, letter in
                     let position = letterIdx < positions.count ? positions[letterIdx] : letterIdx
                     let angle = Angle(degrees: Double(position) * (360.0 / Double(letterCount)) - 90)
@@ -386,7 +99,6 @@ struct TumblePunsView: View {
                         .offset(x: radius * cos(angle.radians), y: radius * sin(angle.radians))
                 }
 
-                // Shuffle button in center
                 if !isCorrect && !viewModel.finished {
                     Button {
                         shuffleWord(index)
@@ -401,13 +113,12 @@ struct TumblePunsView: View {
             }
             .frame(width: 85, height: 85)
 
-            // Answer boxes with clear button overlay
             HStack(spacing: 2) {
                 ForEach(0..<word.solution.count, id: \.self) { letterIndex in
                     let userAnswer = viewModel.wordAnswers[index]
                     let displayLetter = letterIndex < userAnswer.count ? String(userAnswer[userAnswer.index(userAnswer.startIndex, offsetBy: letterIndex)]) : ""
                     let isShaded = word.shadedIndices.contains(letterIndex + 1)
-                    let shouldBounce = viewModel.winBounceIndex == index
+                    let waveDelay = 0.05 + 0.35 * Double(index) + 0.08 * Double(letterIndex)
 
                     Text(displayLetter)
                         .font(.system(size: 15, weight: .bold))
@@ -424,8 +135,15 @@ struct TumblePunsView: View {
                                     lineWidth: isSelected ? 2 : 1
                                 )
                         )
-                        .offset(y: shouldBounce ? -8 : 0)
-                        .animation(.easeInOut(duration: 0.3), value: shouldBounce)
+                        .keyframeAnimator(initialValue: WinBounceState(), trigger: viewModel.winWaveTrigger) { content, state in
+                            content.scaleEffect(state.scale)
+                        } keyframes: { _ in
+                            KeyframeTrack(\.scale) {
+                                CubicKeyframe(1.0, duration: waveDelay)
+                                SpringKeyframe(1.45, duration: 0.18, spring: .init(response: 0.36, dampingRatio: 0.62))
+                                SpringKeyframe(1.0, duration: 0.32, spring: .init(response: 0.40, dampingRatio: 0.72))
+                            }
+                        }
                 }
             }
             .contentShape(Rectangle())
@@ -482,14 +200,12 @@ struct TumblePunsView: View {
                 .fontWeight(.semibold)
                 .foregroundColor(.primary)
 
-            // Shaded letters hint (only show when all words are solved)
             if viewModel.areWordsSolved {
                 Text("Shaded letters: \(viewModel.shadedLetters)")
                     .font(.caption2)
                     .foregroundColor(.primary)
             }
 
-            // Answer input boxes with dashes
             let pattern = viewModel.puzzle.answerPattern
             HStack(spacing: 4) {
                 ForEach(Array(pattern.enumerated()), id: \.offset) { offset, char in
@@ -497,7 +213,7 @@ struct TumblePunsView: View {
                         let letterIndex = pattern.prefix(offset + 1).filter { $0 == "_" }.count - 1
                         let userAnswer = viewModel.finalAnswer
                         let displayLetter = letterIndex < userAnswer.count ? String(userAnswer[userAnswer.index(userAnswer.startIndex, offsetBy: letterIndex)]) : ""
-                        let shouldBounce = viewModel.finalAnswerBounceIndex == letterIndex
+                        let finalDelay = 0.05 + 0.35 * 4.0 + 0.12 * Double(letterIndex)
 
                         Text(displayLetter)
                             .font(.system(size: 20, weight: .bold))
@@ -514,8 +230,15 @@ struct TumblePunsView: View {
                                         lineWidth: viewModel.isFinalAnswerSelected ? 2 : 1
                                     )
                             )
-                            .scaleEffect(shouldBounce ? 1.15 : 1.0)
-                            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: shouldBounce)
+                            .keyframeAnimator(initialValue: WinBounceState(), trigger: viewModel.winWaveTrigger) { content, state in
+                                content.scaleEffect(state.scale)
+                            } keyframes: { _ in
+                                KeyframeTrack(\.scale) {
+                                    CubicKeyframe(1.0, duration: finalDelay)
+                                    SpringKeyframe(1.35, duration: 0.18, spring: .init(response: 0.36, dampingRatio: 0.62))
+                                    SpringKeyframe(1.0, duration: 0.32, spring: .init(response: 0.40, dampingRatio: 0.72))
+                                }
+                            }
                     } else {
                         Text(String(char))
                             .font(.system(size: 24, weight: .bold))
@@ -554,29 +277,6 @@ struct TumblePunsView: View {
     }
 }
 
-// MARK: - Feedback Effects
+// MARK: - Win Wave Animation
 
-private struct Shake: GeometryEffect {
-    var amount: CGFloat = 8
-    var shakesPerUnit: CGFloat = 3
-    var animatableData: CGFloat
-    func effectValue(size: CGSize) -> ProjectionTransform {
-        let translation = amount * sin(animatableData * .pi * shakesPerUnit)
-        return ProjectionTransform(CGAffineTransform(translationX: translation, y: 0))
-    }
-}
-
-private struct IncorrectToastView: View {
-    var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .imageScale(.small)
-            Text("Not quite\u{2014}keep going")
-                .font(.subheadline.weight(.semibold))
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(.ultraThinMaterial, in: Capsule())
-        .shadow(radius: 2, y: 1)
-    }
-}
+private struct WinBounceState { var scale: CGFloat = 1.0 }

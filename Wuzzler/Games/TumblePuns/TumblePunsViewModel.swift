@@ -4,81 +4,30 @@ import Combine
 import UIKit
 
 @MainActor
-public final class TumblePunsViewModel: ObservableObject {
+final class TumblePunsViewModel: GameFlowViewModel {
     @Published public var wordAnswers: [String] = ["", "", "", ""]
     @Published public var finalAnswer: String = ""
     @Published public var selectedWordIndex: Int? = nil
     @Published public var isFinalAnswerSelected: Bool = false
-    @Published public var started: Bool = false
-    @Published public var finished: Bool = false
-    @Published public var elapsedTime: TimeInterval = 0
-    @Published public var finishTime: TimeInterval = 0
-    @Published public var winBounceIndex: Int? = nil
-    @Published public var finalAnswerBounceIndex: Int? = nil
-    @Published public var shakeTrigger: Int = 0
-    @Published public var showIncorrectFeedback: Bool = false
 
     private(set) var engine: TumblePunsEngine
-    private var timerCancellable: AnyCancellable?
-    private var saveWorkItem: DispatchWorkItem?
-    private var startDate: Date?
-    private let storageKeyPrefix = "tumblepuns"
-    private var storageKey: String { "\(storageKeyPrefix)_state" }
 
-    // MARK: - Lightweight per-day meta persistence
-    private struct DailyMeta: Codable {
-        var started: Bool
-        var finished: Bool
-        var elapsedTime: TimeInterval
-        var finishTime: TimeInterval
-        var lastUpdated: Date
+    override var winAnimationDuration: TimeInterval {
+        let finalLetterCount = engine.puzzle.answerPattern.filter { $0 == "_" }.count
+        // Final answer last cell: 0.05 + 0.35*4 + 0.12*(finalLetterCount-1)
+        let lastDelay = 0.05 + 0.35 * 4.0 + 0.12 * Double(finalLetterCount - 1)
+        // + spring settle ~0.50s
+        return lastDelay + 0.50
     }
 
-    private var metaKey: String {
-        let fmt = DateFormatter()
-        fmt.calendar = Calendar(identifier: .gregorian)
-        fmt.locale = Locale(identifier: "en_US_POSIX")
-        fmt.timeZone = TimeZone(secondsFromGMT: 0)
-        fmt.dateFormat = "yyyy-MM-dd"
-        let day = fmt.string(from: Date())
-        return "\(storageKeyPrefix)_meta_\(day)"
-    }
-
-    private func loadDailyMeta() -> DailyMeta? {
-        guard let data = UserDefaults.standard.data(forKey: metaKey) else { return nil }
-        return try? JSONDecoder().decode(DailyMeta.self, from: data)
-    }
-
-    private func saveDailyMeta(started: Bool? = nil,
-                               finished: Bool? = nil,
-                               elapsedTime: TimeInterval? = nil,
-                               finishTime: TimeInterval? = nil) {
-        var current = loadDailyMeta() ?? DailyMeta(started: false, finished: false, elapsedTime: 0, finishTime: 0, lastUpdated: Date())
-        if let s = started { current.started = s }
-        if let f = finished { current.finished = f }
-        if let e = elapsedTime { current.elapsedTime = e }
-        if let ft = finishTime { current.finishTime = ft }
-        current.lastUpdated = Date()
-        if let data = try? JSONEncoder().encode(current) {
-            UserDefaults.standard.set(data, forKey: metaKey)
-        }
-    }
-
-    public init(date: Date = Date()) {
+    init(date: Date = Date()) {
         let puzzle = TumblePunsPuzzleLibrary.loadPuzzle(for: date)
         self.engine = TumblePunsEngine(puzzle: puzzle)
+        super.init(storageKeyPrefix: "tumblepuns", gameType: .tumblePuns)
 
-        // Restore lightweight hub state
-        let meta = self.loadDailyMeta()
-        if let meta = meta {
-            self.started = meta.started
-            self.finished = meta.finished
-            self.elapsedTime = meta.elapsedTime
-            self.finishTime = meta.finishTime
-        }
-
-        // Only restore game state if today's meta indicates we started today
-        if meta?.started == true, let savedState = loadSavedState() {
+        // Restore game state if today's meta indicates we started today
+        if started, let data = loadSavedState(),
+           let savedState = try? JSONDecoder().decode(TumblePunsState.self, from: data) {
             self.engine = TumblePunsEngine(puzzle: puzzle, state: savedState)
             self.wordAnswers = savedState.wordAnswers
             self.finalAnswer = savedState.finalAnswer
@@ -87,73 +36,85 @@ public final class TumblePunsViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Game Actions
-    public func startGame() {
-        guard !started else { return }
-        started = true
-        startDate = Date()
-        saveDailyMeta(started: true)
-        startTimer()
+    // MARK: - Template Method Overrides
+
+    override func onStartGame() {
+        wordAnswers = ["", "", "", ""]
+        finalAnswer = ""
+        selectedWordIndex = nil
+        isFinalAnswerSelected = false
+        engine = TumblePunsEngine(puzzle: engine.puzzle)
         selectWord(0)
     }
 
-    public func resume() {
-        guard started && !finished else { return }
-        startTimer()
+    override func onClearGame() {
+        wordAnswers = ["", "", "", ""]
+        finalAnswer = ""
+        selectedWordIndex = nil
+        isFinalAnswerSelected = false
+        engine = TumblePunsEngine(puzzle: engine.puzzle)
+    }
+
+    override func onResume() {
         if selectedWordIndex == nil && !isFinalAnswerSelected {
             selectFirstIncompleteWord()
         }
     }
 
-    public func pause() {
-        stopTimer()
-        saveWorkItem?.cancel()
+    override func checkGameSolved() -> Bool {
+        let allWordsFilled = (0..<4).allSatisfy { i in
+            wordAnswers[i].count >= engine.puzzle.words[i].solution.count
+        }
+        let expectedFinalLength = engine.puzzle.answerPattern.filter { $0 == "_" }.count
+        let finalFilled = finalAnswer.count >= expectedFinalLength
+        guard allWordsFilled && finalFilled else { return false }
+        return engine.isSolved
+    }
+
+    override func onIncorrectAttempt() {
+        engine.clearFinalAnswer()
+        finalAnswer = engine.state.finalAnswer
         saveState()
-        saveDailyMeta(elapsedTime: elapsedTime)
     }
 
-    /// Clears all game progress, resetting to a fresh not-started state.
-    public func clearGame() {
-        stopTimer()
-        saveWorkItem?.cancel()
-        startDate = nil
-        started = false
-        finished = false
-        elapsedTime = 0
-        finishTime = 0
-        wordAnswers = ["", "", "", ""]
-        finalAnswer = ""
-        selectedWordIndex = nil
-        isFinalAnswerSelected = false
-        winBounceIndex = nil
-        finalAnswerBounceIndex = nil
-        engine = TumblePunsEngine(puzzle: engine.puzzle)
-        UserDefaults.standard.removeObject(forKey: storageKey)
-        UserDefaults.standard.removeObject(forKey: metaKey)
+    override func encodeGameState() -> Data? {
+        try? JSONEncoder().encode(engine.state)
     }
 
-    public func selectWord(_ index: Int?) {
+    override func restoreGameState(from data: Data) -> Bool {
+        guard let state = try? JSONDecoder().decode(TumblePunsState.self, from: data) else { return false }
+        engine = TumblePunsEngine(puzzle: engine.puzzle, state: state)
+        wordAnswers = state.wordAnswers
+        finalAnswer = state.finalAnswer
+        selectedWordIndex = state.selectedWordIndex
+        isFinalAnswerSelected = state.isFinalAnswerSelected
+        return true
+    }
+
+    // MARK: - Game Actions
+
+    func selectWord(_ index: Int?) {
         selectedWordIndex = index
         isFinalAnswerSelected = false
         engine.selectWord(index)
     }
 
-    public func selectFinalAnswer() {
+    func selectFinalAnswer() {
         selectedWordIndex = nil
         isFinalAnswerSelected = true
         engine.selectFinalAnswer()
     }
 
-    public func typeKey(_ key: String) {
+    func typeKey(_ key: String) {
         engine.appendLetter(key)
         wordAnswers = engine.state.wordAnswers
         finalAnswer = engine.state.finalAnswer
         debouncedSave()
-        checkSolved()
+        checkAndSubmit()
         autoAdvanceAfterType()
     }
 
-    public func deleteKey() {
+    func deleteKey() {
         engine.deleteLetter()
         wordAnswers = engine.state.wordAnswers
         finalAnswer = engine.state.finalAnswer
@@ -161,11 +122,22 @@ public final class TumblePunsViewModel: ObservableObject {
         autoGoBackAfterDelete()
     }
 
-    public func clearWord(at index: Int) {
+    func clearWord(at index: Int) {
         engine.clearWord(at: index)
         wordAnswers = engine.state.wordAnswers
         selectWord(index)
         debouncedSave()
+    }
+
+    private func checkAndSubmit() {
+        guard !finished else { return }
+        let allWordsFilled = (0..<4).allSatisfy { i in
+            wordAnswers[i].count >= engine.puzzle.words[i].solution.count
+        }
+        let expectedFinalLength = engine.puzzle.answerPattern.filter { $0 == "_" }.count
+        let finalFilled = finalAnswer.count >= expectedFinalLength
+        guard allWordsFilled && finalFilled else { return }
+        submitAnswer()
     }
 
     private func selectFirstIncompleteWord() {
@@ -175,7 +147,6 @@ public final class TumblePunsViewModel: ObservableObject {
                 return
             }
         }
-        // All words complete, select final answer
         let expectedFinalLength = engine.puzzle.answerPattern.filter { $0 == "_" }.count
         if finalAnswer.count < expectedFinalLength {
             selectFinalAnswer()
@@ -187,14 +158,12 @@ public final class TumblePunsViewModel: ObservableObject {
         if let idx = selectedWordIndex {
             let word = engine.puzzle.words[idx]
             if wordAnswers[idx].count >= word.solution.count {
-                // Find next incomplete word
                 for next in (idx + 1)..<4 {
                     if !correctWordIndices.contains(next) && wordAnswers[next].count < engine.puzzle.words[next].solution.count {
                         selectWord(next)
                         return
                     }
                 }
-                // All words after are complete, go to final answer if needed
                 let expectedFinalLength = engine.puzzle.answerPattern.filter { $0 == "_" }.count
                 if finalAnswer.count < expectedFinalLength {
                     selectFinalAnswer()
@@ -206,7 +175,6 @@ public final class TumblePunsViewModel: ObservableObject {
     private func autoGoBackAfterDelete() {
         guard !finished else { return }
         if isFinalAnswerSelected && finalAnswer.isEmpty {
-            // Go back to last non-correct word
             for prev in stride(from: 3, through: 0, by: -1) {
                 if !correctWordIndices.contains(prev) {
                     selectWord(prev)
@@ -214,7 +182,6 @@ public final class TumblePunsViewModel: ObservableObject {
                 }
             }
         } else if let idx = selectedWordIndex, wordAnswers[idx].isEmpty {
-            // Go back to previous non-correct word
             for prev in stride(from: idx - 1, through: 0, by: -1) {
                 if !correctWordIndices.contains(prev) {
                     selectWord(prev)
@@ -224,139 +191,21 @@ public final class TumblePunsViewModel: ObservableObject {
         }
     }
 
-    private func debouncedSave() {
-        saveWorkItem?.cancel()
-        let workItem = DispatchWorkItem { [weak self] in
-            self?.saveState()
-        }
-        saveWorkItem = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: workItem)
+    // MARK: - Computed Properties
+
+    var correctWordIndices: Set<Int> {
+        engine.correctWordIndices
     }
 
-    public func runWinSequence() {
-        Task {
-            // Bounce the 4 word answer boxes
-            for i in 0..<4 {
-                try? await Task.sleep(nanoseconds: 250_000_000)
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    winBounceIndex = i
-                }
-            }
-            try? await Task.sleep(nanoseconds: 200_000_000)
-            withAnimation(.easeInOut(duration: 0.3)) {
-                winBounceIndex = nil
-            }
-
-            // Bounce the final answer letters one by one
-            let letterCount = engine.puzzle.answerPattern.filter { $0 == "_" }.count
-            for i in 0..<letterCount {
-                try? await Task.sleep(nanoseconds: 150_000_000)
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    finalAnswerBounceIndex = i
-                }
-            }
-            try? await Task.sleep(nanoseconds: 300_000_000)
-            withAnimation(.easeInOut(duration: 0.3)) {
-                finalAnswerBounceIndex = nil
-            }
-        }
+    var areWordsSolved: Bool {
+        engine.areWordsSolved
     }
 
-    private func checkSolved() {
-        guard !finished else { return }
-
-        // Check if all inputs are completely filled
-        let allWordsFilled = (0..<4).allSatisfy { i in
-            wordAnswers[i].count >= engine.puzzle.words[i].solution.count
-        }
-        let expectedFinalLength = engine.puzzle.answerPattern.filter { $0 == "_" }.count
-        let finalFilled = finalAnswer.count >= expectedFinalLength
-        guard allWordsFilled && finalFilled else { return }
-
-        if engine.isSolved {
-            finished = true
-            finishTime = elapsedTime
-            stopTimer()
-            saveDailyMeta(finished: true, finishTime: finishTime)
-            saveState()
-            Haptics.notify(.success)
-            runWinSequence()
-        } else {
-            triggerIncorrectFeedback()
-        }
+    var shadedLetters: String {
+        engine.shadedLetters
     }
 
-    private lazy var feedbackGenerator: UINotificationFeedbackGenerator = {
-        let gen = UINotificationFeedbackGenerator()
-        gen.prepare()
-        return gen
-    }()
-
-    private func triggerIncorrectFeedback() {
-        Haptics.notify(.warning)
-        withAnimation(.easeIn(duration: 0.12)) {
-            shakeTrigger += 1
-            showIncorrectFeedback = true
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) { [weak self] in
-            withAnimation(.easeOut(duration: 0.2)) {
-                self?.showIncorrectFeedback = false
-            }
-        }
-        // Clear the final answer so the user can retype it
-        engine.clearFinalAnswer()
-        finalAnswer = engine.state.finalAnswer
-        saveState()
-    }
-
-    // MARK: - Timer
-    private func startTimer() {
-        guard timerCancellable == nil else { return }
-        startDate = Date().addingTimeInterval(-elapsedTime)
-        timerCancellable = Timer.publish(every: 1.0, on: .main, in: .common)
-            .autoconnect()
-            .sink { [weak self] _ in
-                guard let self = self, let start = self.startDate else { return }
-                self.elapsedTime = Date().timeIntervalSince(start)
-            }
-    }
-
-    private func stopTimer() {
-        timerCancellable?.cancel()
-        timerCancellable = nil
-    }
-
-    public var elapsedTimeString: String {
-        let minutes = Int(elapsedTime) / 60
-        let seconds = Int(elapsedTime) % 60
-        return String(format: "%02d:%02d", minutes, seconds)
-    }
-
-    public var correctWordIndices: Set<Int> {
-        return engine.correctWordIndices
-    }
-
-    public var areWordsSolved: Bool {
-        return engine.areWordsSolved
-    }
-
-    public var shadedLetters: String {
-        return engine.shadedLetters
-    }
-
-    public var puzzle: TumblePunsPuzzle {
-        return engine.puzzle
-    }
-
-    // MARK: - Persistence
-    private func saveState() {
-        if let data = try? JSONEncoder().encode(engine.state) {
-            UserDefaults.standard.set(data, forKey: storageKey)
-        }
-    }
-
-    private func loadSavedState() -> TumblePunsState? {
-        guard let data = UserDefaults.standard.data(forKey: storageKey) else { return nil }
-        return try? JSONDecoder().decode(TumblePunsState.self, from: data)
+    var puzzle: TumblePunsPuzzle {
+        engine.puzzle
     }
 }

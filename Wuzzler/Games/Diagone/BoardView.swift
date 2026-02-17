@@ -277,29 +277,3 @@ fileprivate struct DiagonalDropDelegate: DropDelegate {
     }
 }
 
-/// A gentle shake effect used for incorrect feedback (NYT-style)
-fileprivate struct Shake: GeometryEffect {
-    var amount: CGFloat = 8
-    var shakesPerUnit: CGFloat = 3
-    var animatableData: CGFloat
-    func effectValue(size: CGSize) -> ProjectionTransform {
-        let translation = amount * sin(animatableData * .pi * shakesPerUnit)
-        return ProjectionTransform(CGAffineTransform(translationX: translation, y: 0))
-    }
-}
-
-/// A subtle, production-grade toast for incorrect puzzles.
-fileprivate struct IncorrectToastView: View {
-    var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .imageScale(.small)
-            Text("Not quite—keep going")
-                .font(.subheadline.weight(.semibold))
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(.ultraThinMaterial, in: Capsule())
-        .shadow(radius: 2, y: 1)
-    }
-}

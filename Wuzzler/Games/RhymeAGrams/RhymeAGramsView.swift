@@ -1,304 +1,13 @@
 import SwiftUI
 
-private extension UIApplication {
-    func endEditing() {
-        sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-    }
-}
-
-struct RhymeAGramsView: View {
-    @StateObject var viewModel: RhymeAGramsViewModel
-    @Environment(\.scenePhase) private var scenePhase
-    @Environment(\.gameAccent) private var gameAccent
-    let onBackToHome: () -> Void
-
-    @State private var showHub: Bool = true
-    @State private var gameCleared: Bool = false
-    @State private var showTutorial: Bool = false
-    @State private var showShareSheet: Bool = false
-    @State private var shareText: String = ""
-
-    private var tutorialSteps: [TutorialStep] {
-        [
-            TutorialStep(icon: "triangle", title: "Welcome to RhymeAGrams", description: "Find four 4-letter rhyming words hidden in the pyramid of letters. All four words rhyme!"),
-            TutorialStep(icon: "hand.tap", title: "Tap to Spell", description: "Tap letters in the pyramid or use the keyboard to spell each word. Every letter is used exactly once across all four words."),
-            TutorialStep(icon: "arrow.right.arrow.left", title: "Navigate Words", description: "Tap any answer row to select it. Words auto-advance when filled. Backspace moves to the previous word if the current one is empty."),
-        ]
-    }
-
-    private enum HubMode { case notStarted, inProgress, completed }
-    private var hubMode: HubMode {
-        if viewModel.finished {
-            return .completed
-        } else if viewModel.started || gameCleared {
-            return .inProgress
-        } else {
-            return .notStarted
-        }
-    }
+/// Game-specific content for RhymeAGrams. Wrapped by GameFlowView in the coordinator.
+struct RhymeAGramsGameView: View {
+    @ObservedObject var viewModel: RhymeAGramsViewModel
+    let onPause: () -> Void
 
     var body: some View {
-        Group {
-            if showHub {
-                startHub
-            } else {
-                gameView
-            }
-        }
-        .onAppear {
-            if !viewModel.started {
-                // Coming from loading screen - start the game and go directly to game
-                viewModel.startGame()
-                showHub = false
-            } else {
-                // Returning to paused or completed game - show hub
-                showHub = true
-            }
-        }
-        .onChange(of: scenePhase) { _, phase in
-            if phase == .background || phase == .inactive {
-                if viewModel.started && !viewModel.finished {
-                    viewModel.pause()
-                    showHub = true
-                }
-            }
-        }
-        .onChange(of: viewModel.finished) { _, didFinish in
-            if didFinish {
-                UIApplication.shared.endEditing()
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                    showHub = true
-                }
-            }
-        }
-    }
-
-    // MARK: - Hub
-    private var startHub: some View {
         VStack(spacing: 0) {
-
-            VStack(spacing: 16) {
-                Spacer()
-                RhymeAGramsIconView(size: 80)
-
-                Text("RhymeAGrams")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-
-                Text("Find four 4-letter rhyming words from a pyramid of letters")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, 40)
-
-                Button(action: { showTutorial = true }) {
-                    Label("How to Play", systemImage: "questionmark.circle")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundColor(gameAccent)
-                }
-            }
-
-            Spacer()
-
-            // Bottom content - state-specific
-            VStack(spacing: 16) {
-                switch hubMode {
-                case .notStarted:
-                    Button(action: {
-                        UIApplication.shared.endEditing()
-                        viewModel.startGame()
-                        showHub = false
-                    }) {
-                        Text("Play")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(gameAccent)
-                            .cornerRadius(12)
-                    }
-
-                case .inProgress:
-                    Text(gameCleared ? "Game cleared." : "You're in the middle of today's puzzle.")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    Text(viewModel.elapsedTimeString)
-                        .font(.system(size: 28, weight: .heavy, design: .rounded))
-                        .monospacedDigit()
-
-                    Button(action: {
-                        UIApplication.shared.endEditing()
-                        if gameCleared {
-                            gameCleared = false
-                            viewModel.startGame()
-                        } else {
-                            viewModel.resume()
-                        }
-                        showHub = false
-                    }) {
-                        Text(gameCleared ? "Play" : "Resume")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(gameAccent)
-                            .cornerRadius(12)
-                    }
-
-                    Button(action: {
-                        UIApplication.shared.endEditing()
-                        viewModel.clearGame()
-                        gameCleared = true
-                    }) {
-                        Text("Clear Game")
-                            .font(.headline)
-                            .foregroundColor(gameAccent)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.clear)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(gameAccent, lineWidth: 2)
-                            )
-                    }
-                    .opacity(gameCleared ? 0.4 : 1.0)
-                    .disabled(gameCleared)
-
-                    Button(action: onBackToHome) {
-                        Text("Back to Home")
-                            .font(.headline)
-                            .foregroundColor(gameAccent)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.clear)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(gameAccent, lineWidth: 2)
-                            )
-                    }
-
-                case .completed:
-                    Text("Great job!")
-                        .font(.title3.weight(.semibold))
-
-                    Text("Time: \(String(format: "%02d:%02d", Int(viewModel.finishTime) / 60, Int(viewModel.finishTime) % 60))")
-                        .font(.system(size: 28, weight: .heavy, design: .rounded))
-                        .monospacedDigit()
-
-                    Button {
-                        let time = String(format: "%d:%02d", Int(viewModel.finishTime) / 60, Int(viewModel.finishTime) % 60)
-                        shareText = "Wuzzler — RhymeAGrams\nSolved in \(time)!"
-                        showShareSheet = true
-                    } label: {
-                        Label("Share Results", systemImage: "square.and.arrow.up")
-                            .font(.subheadline.weight(.medium))
-                            .foregroundColor(gameAccent)
-                    }
-
-                    Text("Check back tomorrow for a new puzzle!")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    Button(action: {
-                        UIApplication.shared.endEditing()
-                        showHub = false
-                        viewModel.runWinSequence()
-                    }) {
-                        Text("View Today's Puzzle")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(gameAccent)
-                            .cornerRadius(12)
-                    }
-
-                    Button(action: onBackToHome) {
-                        Text("Back to Home")
-                            .font(.headline)
-                            .foregroundColor(gameAccent)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.clear)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(gameAccent, lineWidth: 2)
-                            )
-                    }
-                }
-            }
-            .padding(.horizontal, 40)
-            .padding(.bottom, 40)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .background(Color.boardCell.opacity(0.2).ignoresSafeArea())
-        .overlay {
-            if showTutorial {
-                TutorialOverlay(steps: tutorialSteps, accentColor: gameAccent, onDismiss: { showTutorial = false })
-            }
-        }
-        .sheet(isPresented: $showShareSheet) {
-            ShareActivityView(items: [shareText])
-        }
-    }
-
-    // MARK: - Game View
-    private var gameView: some View {
-        VStack(spacing: 0) {
-            // Header
-            HStack {
-                Button {
-                    UIApplication.shared.endEditing()
-                    viewModel.pause()
-                    showHub = true
-                } label: {
-                    Label("Back", systemImage: "chevron.backward")
-                        .font(.headline)
-                }
-
-                Spacer()
-
-                Text("RhymeAGrams")
-                    .font(.headline)
-
-                Spacer()
-
-                if viewModel.started && !viewModel.finished {
-                    HStack(spacing: 8) {
-                        Text(viewModel.elapsedTimeString)
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                            .monospacedDigit()
-                        Button {
-                            viewModel.pause()
-                            showHub = true
-                        } label: {
-                            Image(systemName: "pause.fill")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                        }
-                        .accessibilityLabel("Pause Game")
-                    }
-                    .frame(width: 75, alignment: .trailing)
-                } else if viewModel.started && viewModel.finished {
-                    Text(viewModel.elapsedTimeString)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .monospacedDigit()
-                        .frame(width: 75, alignment: .trailing)
-                } else {
-                    Color.clear.frame(width: 75)
-                }
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 16)
-            .background(Color.boardCell.opacity(0.1))
+            GameHeader(viewModel: viewModel, gameName: "RhymeAGrams", onPause: onPause)
 
             VStack(spacing: 20) {
                 Spacer()
@@ -319,7 +28,7 @@ struct RhymeAGramsView: View {
                     selectedSlot: viewModel.selectedSlot,
                     correctIndices: viewModel.correctAnswerIndices,
                     isSolved: viewModel.finished,
-                    bounceIndex: viewModel.winBounceIndex,
+                    winWaveTrigger: viewModel.winWaveTrigger,
                     onSelectSlot: { index in
                         viewModel.selectSlot(index)
                     }
@@ -394,12 +103,14 @@ private struct PyramidView: View {
 }
 
 // MARK: - Answer Slots View
+private struct BounceState { var scale: CGFloat = 1.0 }
+
 private struct AnswerSlotsView: View {
     let answers: [String]
     let selectedSlot: Int
     let correctIndices: Set<Int>
     let isSolved: Bool
-    let bounceIndex: Int?
+    let winWaveTrigger: Int
     let onSelectSlot: (Int) -> Void
 
     var body: some View {
@@ -410,7 +121,8 @@ private struct AnswerSlotsView: View {
                     isSelected: selectedSlot == index && !isSolved,
                     isCorrect: correctIndices.contains(index),
                     isSolved: isSolved,
-                    shouldBounce: bounceIndex == index,
+                    winWaveTrigger: winWaveTrigger,
+                    rowIndex: index,
                     onTap: {
                         onSelectSlot(index)
                     }
@@ -426,10 +138,10 @@ private struct AnswerSlotRow: View {
     let isSelected: Bool
     let isCorrect: Bool
     let isSolved: Bool
-    let shouldBounce: Bool
+    let winWaveTrigger: Int
+    let rowIndex: Int
     let onTap: () -> Void
 
-    /// Index of the next letter to be typed (0-3), or 4 if full
     private var cursorIndex: Int { answer.count }
 
     var body: some View {
@@ -437,6 +149,7 @@ private struct AnswerSlotRow: View {
             ForEach(0..<4, id: \.self) { index in
                 let letter = index < answer.count ? String(answer[answer.index(answer.startIndex, offsetBy: index)]) : ""
                 let isCursor = isSelected && index == cursorIndex
+                let delay = 0.05 + 0.22 * Double(rowIndex) + 0.09 * Double(index)
                 Text(letter)
                     .font(.system(size: 28, weight: .bold, design: .rounded))
                     .foregroundColor(.primary)
@@ -449,8 +162,15 @@ private struct AnswerSlotRow: View {
                                     .strokeBorder(borderColor, lineWidth: isSelected ? 2.5 : 1)
                             )
                     )
-                    .scaleEffect(shouldBounce ? 1.1 : 1.0)
-                    .animation(.spring(response: 0.3, dampingFraction: 0.6), value: shouldBounce)
+                    .keyframeAnimator(initialValue: BounceState(), trigger: winWaveTrigger) { content, state in
+                        content.scaleEffect(state.scale)
+                    } keyframes: { _ in
+                        KeyframeTrack(\.scale) {
+                            CubicKeyframe(1.0, duration: delay)
+                            SpringKeyframe(1.18, duration: 0.18, spring: .init(response: 0.36, dampingRatio: 0.62))
+                            SpringKeyframe(1.0, duration: 0.32, spring: .init(response: 0.40, dampingRatio: 0.72))
+                        }
+                    }
             }
         }
         .contentShape(Rectangle())
@@ -485,7 +205,7 @@ private struct AnswerSlotRow: View {
 
 // MARK: - Feedback Effects
 
-private struct Shake: GeometryEffect {
+struct Shake: GeometryEffect {
     var amount: CGFloat = 8
     var shakesPerUnit: CGFloat = 3
     var animatableData: CGFloat
@@ -495,7 +215,7 @@ private struct Shake: GeometryEffect {
     }
 }
 
-private struct IncorrectToastView: View {
+struct IncorrectToastView: View {
     var body: some View {
         HStack(spacing: 8) {
             Image(systemName: "exclamationmark.triangle.fill")
@@ -509,4 +229,3 @@ private struct IncorrectToastView: View {
         .shadow(radius: 2, y: 1)
     }
 }
-

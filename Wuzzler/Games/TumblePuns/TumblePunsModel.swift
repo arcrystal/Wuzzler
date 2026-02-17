@@ -181,14 +181,14 @@ class TumblePunsEngine {
 enum TumblePunsPuzzleLibrary {
     struct PuzzleData: Decodable {
         struct WordData: Decodable {
-            let scrambled: String
+            let scrambled: String?
             let solution: String
             let shadedIndices: [Int]
         }
 
         let words: [WordData]
         let definition: String
-        let answerPattern: String
+        let answerPattern: String?
         let answer: String
     }
 
@@ -228,12 +228,14 @@ enum TumblePunsPuzzleLibrary {
         if let puzzleMap = loadPuzzleMap(),
            let puzzleData = puzzleMap[dateKey] {
             let words = puzzleData.words.map { word in
-                TumbleWord(scrambled: word.scrambled, solution: word.solution, shadedIndices: word.shadedIndices)
+                let scrambled = word.scrambled ?? Self.scramble(word.solution, seed: dateKey)
+                return TumbleWord(scrambled: scrambled, solution: word.solution, shadedIndices: word.shadedIndices)
             }
+            let answerPattern = puzzleData.answerPattern ?? Self.derivePattern(from: puzzleData.answer)
             return TumblePunsPuzzle(
                 words: words,
                 definition: puzzleData.definition,
-                answerPattern: puzzleData.answerPattern,
+                answerPattern: answerPattern,
                 answer: puzzleData.answer
             )
         }
@@ -251,5 +253,30 @@ enum TumblePunsPuzzleLibrary {
             answerPattern: "___-_____",
             answer: "OLD-TIMER"
         )
+    }
+
+    /// Derive an answer pattern from the answer string (e.g. "OLD-TIMER" → "___-_____")
+    private static func derivePattern(from answer: String) -> String {
+        String(answer.map { $0.isLetter ? Character("_") : $0 })
+    }
+
+    /// Deterministically scramble a word using a seed string so the same date always
+    /// produces the same scramble, but the letters are shuffled.
+    private static func scramble(_ word: String, seed: String) -> String {
+        var chars = Array(word.uppercased())
+        // Use a simple seeded shuffle based on the word + date
+        var h = seed.hashValue &+ word.hashValue
+        for i in stride(from: chars.count - 1, through: 1, by: -1) {
+            h = h &* 6364136223846793005 &+ 1442695040888963407
+            let j = abs(h) % (i + 1)
+            chars.swapAt(i, j)
+        }
+        // If the scramble happens to match the original, swap first two
+        let result = String(chars)
+        if result == word.uppercased() && chars.count >= 2 {
+            chars.swapAt(0, 1)
+            return String(chars)
+        }
+        return result
     }
 }
