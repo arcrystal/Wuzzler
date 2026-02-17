@@ -196,6 +196,7 @@ public final class RhymeAGramsViewModel: ObservableObject {
             stopTimer()
             saveDailyMeta(finished: true, finishTime: finishTime)
             saveState()
+            Haptics.notify(.success)
             runWinSequence()
         } else {
             triggerIncorrectFeedback()
@@ -203,7 +204,7 @@ public final class RhymeAGramsViewModel: ObservableObject {
     }
 
     private func triggerIncorrectFeedback() {
-        UINotificationFeedbackGenerator().notificationOccurred(.warning)
+        Haptics.notify(.warning)
         withAnimation(.easeIn(duration: 0.12)) {
             shakeTrigger += 1
             showIncorrectFeedback = true

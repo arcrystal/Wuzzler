@@ -2,13 +2,27 @@ import SwiftUI
 
 struct HomeView: View {
     let onGameSelected: (GameType) -> Void
+    @State private var showMenu = false
 
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
-                Text("Wuzzler")
-                    .font(.largeTitle.weight(.bold))
-                    .padding(.top, 40)
+                HStack {
+                    Button { showMenu = true } label: {
+                        Image(systemName: "gearshape")
+                            .font(.title3.weight(.medium))
+                            .foregroundColor(.primary)
+                    }
+                    .accessibilityLabel("Menu")
+                    Spacer()
+                    Text("Wuzzler")
+                        .font(.largeTitle.weight(.bold))
+                    Spacer()
+                    // Balance the hamburger button width
+                    Color.clear
+                        .frame(width: 28, height: 28)
+                }
+                .padding(.top, 40)
 
                 ForEach(GameType.allCases) { game in
                     GameCard(gameType: game, onTap: {
@@ -21,12 +35,32 @@ struct HomeView: View {
             .padding(.horizontal, 20)
         }
         .background(Color(UIColor.systemGray6))
+        .sheet(isPresented: $showMenu) {
+            MenuView()
+        }
     }
 }
 
 fileprivate struct GameCard: View {
     let gameType: GameType
     let onTap: () -> Void
+
+    private var isTodayCompleted: Bool {
+        let prefix: String
+        switch gameType {
+        case .diagone: prefix = "diagone"
+        case .rhymeAGrams: prefix = "rhymeagrams"
+        case .tumblePuns: prefix = "tumblepuns"
+        }
+        let fmt = DateFormatter()
+        fmt.dateFormat = "yyyy-MM-dd"
+        fmt.timeZone = TimeZone(secondsFromGMT: 0)
+        let key = "\(prefix)_meta_\(fmt.string(from: Date()))"
+        guard let data = UserDefaults.standard.data(forKey: key),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let finished = json["finished"] as? Bool else { return false }
+        return finished
+    }
 
     var body: some View {
         Button(action: onTap) {
@@ -35,9 +69,17 @@ fileprivate struct GameCard: View {
                     .frame(width: 70, height: 70)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(gameType.displayName)
-                        .font(.title2.weight(.semibold))
-                        .foregroundColor(.primary)
+                    HStack(spacing: 6) {
+                        Text(gameType.displayName)
+                            .font(.title2.weight(.semibold))
+                            .foregroundColor(.primary)
+
+                        if isTodayCompleted {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(gameType.accentColor)
+                                .font(.subheadline)
+                        }
+                    }
 
                     Text(gameType.description)
                         .font(.subheadline)
@@ -58,6 +100,8 @@ fileprivate struct GameCard: View {
             .shadow(radius: 2, y: 1)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("\(gameType.displayName)\(isTodayCompleted ? ", completed" : "")")
+        .accessibilityHint(gameType.description)
     }
 }
 

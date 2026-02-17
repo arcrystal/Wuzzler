@@ -279,6 +279,7 @@ public final class TumblePunsViewModel: ObservableObject {
             stopTimer()
             saveDailyMeta(finished: true, finishTime: finishTime)
             saveState()
+            Haptics.notify(.success)
             runWinSequence()
         } else {
             triggerIncorrectFeedback()
@@ -292,8 +293,7 @@ public final class TumblePunsViewModel: ObservableObject {
     }()
 
     private func triggerIncorrectFeedback() {
-        feedbackGenerator.notificationOccurred(.warning)
-        feedbackGenerator.prepare()
+        Haptics.notify(.warning)
         withAnimation(.easeIn(duration: 0.12)) {
             shakeTrigger += 1
             showIncorrectFeedback = true

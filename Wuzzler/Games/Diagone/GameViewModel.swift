@@ -72,11 +72,8 @@ public final class GameViewModel: ObservableObject {
     /// Fires on every drag position change so the floating chip overlay can
     /// update without causing a full view-tree invalidation.
     public let dragPositionDidChange = PassthroughSubject<Void, Never>()
-    
+
     // Win sequence state
-//    @Published public var winBounceIndex: Int? = nil
-    /// Set of flattened board indices (0..35) currently bouncing. Used for diagonal wave animation.
-//    @Published public var winBounceIndices: Set<Int> = []
     @Published public var winWaveTrigger: Int = 0
     private var winWaveTask: Task<Void, Never>?
     
@@ -210,8 +207,7 @@ public final class GameViewModel: ObservableObject {
             saveState()
             maybeHandleCompletionState()
         } else {
-            let generator = UINotificationFeedbackGenerator()
-            generator.notificationOccurred(.error)
+            Haptics.notify(.error)
         }
         return success
     }
@@ -354,7 +350,7 @@ public final class GameViewModel: ObservableObject {
             let clock = ContinuousClock()
             try? await clock.sleep(for: perStep * (totalSteps - 1) + tail)
 
-            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            Haptics.notify(.success)
             self.startConfettiSequence()
         }
     }
@@ -389,8 +385,7 @@ public final class GameViewModel: ObservableObject {
     /// Triggers a subtle incorrect feedback: gentle haptic + quick board shake + brief toast (driven by showIncorrectFeedback in the view layer)
     private func triggerIncorrectFeedback() {
         // Haptic: a soft warning nudge
-        let generator = UINotificationFeedbackGenerator()
-        generator.notificationOccurred(.warning)
+        Haptics.notify(.warning)
         // Shake: increment trigger to animate a small horizontal shake
         withAnimation(.easeIn(duration: 0.12)) {
             shakeTrigger += 1
@@ -612,7 +607,7 @@ public final class GameViewModel: ObservableObject {
     // MARK: - Taps
     public func handleTap(on targetId: String) {
         guard !finished else { return }
-        UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+        Haptics.impact(.soft)
         removePiece(from: targetId)
         
     }
@@ -680,11 +675,4 @@ public final class GameViewModel: ObservableObject {
         }
     }
     
-    // Opens a previous date’s puzzle. TODO: Replace with engine-backed historical loading.
-    public func openPuzzle(for date: Date) {
-        // Placeholder implementation:
-        // If you already have an engine API for historical puzzles, call it here.
-        // e.g., engine.loadDaily(date: date); reset timers; etc.
-        startGame()
-    }
 }

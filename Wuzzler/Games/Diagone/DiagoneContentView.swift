@@ -32,6 +32,8 @@ struct DiagoneContentView: View {
     @State private var showHub: Bool = true
     @State private var gameCleared: Bool = false
     @State private var showTutorial: Bool = false
+    @State private var showShareSheet: Bool = false
+    @State private var shareText: String = ""
 
     private var tutorialSteps: [TutorialStep] {
         [
@@ -207,6 +209,7 @@ struct DiagoneContentView: View {
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
+                    .accessibilityLabel("Pause Game")
                 }
                 .frame(width: 75, alignment: .trailing)
             } else if viewModel.started && viewModel.isSolved {
@@ -342,6 +345,16 @@ struct DiagoneContentView: View {
                         .font(.system(size: 28, weight: .heavy, design: .rounded))
                         .monospacedDigit()
 
+                    Button {
+                        let time = String(format: "%d:%02d", Int(viewModel.finishTime) / 60, Int(viewModel.finishTime) % 60)
+                        showShareSheet = true
+                        shareText = "Wuzzler — Diagone\nSolved in \(time)!"
+                    } label: {
+                        Label("Share Results", systemImage: "square.and.arrow.up")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundColor(gameAccent)
+                    }
+
                     Text("Check back tomorrow for a new puzzle!")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
@@ -389,6 +402,9 @@ struct DiagoneContentView: View {
             if showTutorial {
                 TutorialOverlay(steps: tutorialSteps, accentColor: gameAccent, onDismiss: { showTutorial = false })
             }
+        }
+        .sheet(isPresented: $showShareSheet) {
+            ShareActivityView(items: [shareText])
         }
     }
 

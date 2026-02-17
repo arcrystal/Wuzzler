@@ -52,7 +52,7 @@ struct SplashScreen: View {
 
     var body: some View {
         ZStack {
-            Color(red: 0.12, green: 0.35, blue: 0.65)
+            Color.diagoneAccent
                 .ignoresSafeArea()
 
             WuzzlerSplashLogo(settled: settled, tileOpacities: tileOpacities, sheenValues: sheenValues)
@@ -119,7 +119,7 @@ fileprivate struct WuzzlerSplashLogo: View {
 
                 Text(tile.letter)
                     .font(.system(size: tileSize * 0.55, weight: .bold, design: .rounded))
-                    .foregroundColor(Color(red: 0.12, green: 0.35, blue: 0.65))
+                    .foregroundColor(.diagoneAccent)
                     .frame(width: tileSize, height: tileSize)
                     .background(
                         RoundedRectangle(cornerRadius: tileSize * 0.18, style: .continuous)

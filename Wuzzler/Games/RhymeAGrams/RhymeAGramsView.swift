@@ -15,6 +15,8 @@ struct RhymeAGramsView: View {
     @State private var showHub: Bool = true
     @State private var gameCleared: Bool = false
     @State private var showTutorial: Bool = false
+    @State private var showShareSheet: Bool = false
+    @State private var shareText: String = ""
 
     private var tutorialSteps: [TutorialStep] {
         [
@@ -187,6 +189,16 @@ struct RhymeAGramsView: View {
                         .font(.system(size: 28, weight: .heavy, design: .rounded))
                         .monospacedDigit()
 
+                    Button {
+                        let time = String(format: "%d:%02d", Int(viewModel.finishTime) / 60, Int(viewModel.finishTime) % 60)
+                        shareText = "Wuzzler — RhymeAGrams\nSolved in \(time)!"
+                        showShareSheet = true
+                    } label: {
+                        Label("Share Results", systemImage: "square.and.arrow.up")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundColor(gameAccent)
+                    }
+
                     Text("Check back tomorrow for a new puzzle!")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
@@ -231,6 +243,9 @@ struct RhymeAGramsView: View {
                 TutorialOverlay(steps: tutorialSteps, accentColor: gameAccent, onDismiss: { showTutorial = false })
             }
         }
+        .sheet(isPresented: $showShareSheet) {
+            ShareActivityView(items: [shareText])
+        }
     }
 
     // MARK: - Game View
@@ -268,6 +283,7 @@ struct RhymeAGramsView: View {
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
+                        .accessibilityLabel("Pause Game")
                     }
                     .frame(width: 75, alignment: .trailing)
                 } else if viewModel.started && viewModel.finished {
@@ -443,6 +459,7 @@ private struct AnswerSlotRow: View {
                 onTap()
             }
         }
+        .accessibilityLabel("Answer slot")
     }
 
     private func cellBackground(index: Int, isCursor: Bool) -> Color {

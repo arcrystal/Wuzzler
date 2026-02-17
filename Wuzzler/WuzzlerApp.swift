@@ -6,9 +6,12 @@ import SwiftUI
 /// multiple game options.
 @main
 struct WuzzlerApp: App {
+    @AppStorage("appearance_mode") private var appearanceMode: AppearanceMode = .system
+
     var body: some Scene {
         WindowGroup {
             AppCoordinatorView()
+                .preferredColorScheme(appearanceMode.colorScheme)
         }
     }
 }

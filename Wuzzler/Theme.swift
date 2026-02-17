@@ -1,4 +1,25 @@
 import SwiftUI
+import UIKit
+
+// MARK: - Haptics Utility
+
+extension UserDefaults {
+    var hapticsEnabled: Bool {
+        object(forKey: "haptics_enabled") as? Bool ?? true
+    }
+}
+
+enum Haptics {
+    static func notify(_ type: UINotificationFeedbackGenerator.FeedbackType) {
+        guard UserDefaults.standard.hapticsEnabled else { return }
+        UINotificationFeedbackGenerator().notificationOccurred(type)
+    }
+
+    static func impact(_ style: UIImpactFeedbackGenerator.FeedbackStyle = .soft) {
+        guard UserDefaults.standard.hapticsEnabled else { return }
+        UIImpactFeedbackGenerator(style: style).impactOccurred()
+    }
+}
 
 // MARK: - Game Accent Environment Key
 

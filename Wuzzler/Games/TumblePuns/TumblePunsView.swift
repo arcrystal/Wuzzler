@@ -9,6 +9,8 @@ struct TumblePunsView: View {
     @State private var showHub: Bool = true
     @State private var gameCleared: Bool = false
     @State private var showTutorial: Bool = false
+    @State private var showShareSheet: Bool = false
+    @State private var shareText: String = ""
 
     private var tutorialSteps: [TutorialStep] {
         [
@@ -202,6 +204,16 @@ struct TumblePunsView: View {
                         .font(.system(size: 28, weight: .heavy, design: .rounded))
                         .monospacedDigit()
 
+                    Button {
+                        let time = String(format: "%d:%02d", Int(viewModel.finishTime) / 60, Int(viewModel.finishTime) % 60)
+                        shareText = "Wuzzler — TumblePuns\nSolved in \(time)!"
+                        showShareSheet = true
+                    } label: {
+                        Label("Share Results", systemImage: "square.and.arrow.up")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundColor(gameAccent)
+                    }
+
                     Text("Check back tomorrow for a new puzzle!")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
@@ -243,6 +255,9 @@ struct TumblePunsView: View {
             if showTutorial {
                 TutorialOverlay(steps: tutorialSteps, accentColor: gameAccent, onDismiss: { showTutorial = false })
             }
+        }
+        .sheet(isPresented: $showShareSheet) {
+            ShareActivityView(items: [shareText])
         }
     }
 
@@ -303,6 +318,7 @@ struct TumblePunsView: View {
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
+                    .accessibilityLabel("Pause Game")
                 }
                 .frame(width: 75, alignment: .trailing)
             } else if viewModel.started && viewModel.finished {
@@ -380,6 +396,7 @@ struct TumblePunsView: View {
                             .foregroundColor(.secondary)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Shuffle letters")
                 }
             }
             .frame(width: 85, height: 85)
@@ -417,6 +434,7 @@ struct TumblePunsView: View {
                     viewModel.selectWord(index)
                 }
             }
+            .accessibilityLabel("Word \(index + 1) answer")
             .overlay(alignment: .topTrailing) {
                 if !viewModel.wordAnswers[index].isEmpty && !isCorrect && !viewModel.finished {
                     Button {
@@ -429,6 +447,7 @@ struct TumblePunsView: View {
                             .contentShape(Circle().scale(2.5))
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Clear word \(index + 1)")
                     .offset(x: 16, y: -16)
                     .zIndex(1)
                     .transition(.opacity)
@@ -511,6 +530,7 @@ struct TumblePunsView: View {
                     viewModel.selectFinalAnswer()
                 }
             }
+            .accessibilityLabel("Final answer")
         }
         .padding(.horizontal, 20)
     }

@@ -31,6 +31,7 @@ struct KeyboardView: View {
                             .onTapGesture {
                                 onKeyTap(key)
                             }
+                            .accessibilityLabel(key)
                     }
                     if rowIndex == 2 {
                         Image(systemName: "delete.left")
@@ -45,6 +46,7 @@ struct KeyboardView: View {
                             .onTapGesture {
                                 onDelete()
                             }
+                            .accessibilityLabel("Delete")
                     }
                 }
             }

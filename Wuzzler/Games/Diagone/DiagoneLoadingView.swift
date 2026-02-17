@@ -68,8 +68,8 @@ struct DiagoneLoadingView: View {
                     .font(.title3.weight(.semibold))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    .background(Capsule().fill(Color.primary))
-                    .foregroundStyle(Color(UIColor.systemBackground))
+                    .background(Capsule().fill(gameAccent))
+                    .foregroundStyle(.white)
                     .padding(.horizontal, 32)
             }
 
