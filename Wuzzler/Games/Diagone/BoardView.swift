@@ -1,5 +1,4 @@
 import SwiftUI
-import UniformTypeIdentifiers
 
 private struct TileBounceState { var scale: CGFloat = 1.0 }
 
@@ -244,36 +243,4 @@ fileprivate struct DropTargetOverlay: View {
     }
 }
 
-/// Drop delegate that manages drag and drop interactions for a single diagonal.
-/// Restricts drops to valid targets based on the piece currently being dragged
-/// and updates hover highlighting via the view model. When a drop occurs the
-/// delegate forwards the placement to the view model. Invalid drops simply
-/// cancel without modifying state.
-fileprivate struct DiagonalDropDelegate: DropDelegate {
-    let target: GameTarget
-    @ObservedObject var viewModel: GameViewModel
-
-    func validateDrop(info: DropInfo) -> Bool {
-        // Allow a drop only if we know which piece is being dragged and the target
-        // is in the valid list for that piece.
-        guard let pieceId = viewModel.draggingPieceId else { return false }
-        return viewModel.validTargets(for: pieceId).contains(target.id)
-    }
-
-    func dropEntered(info: DropInfo) {
-        viewModel.dragEntered(targetId: target.id)
-    }
-
-    func dropExited(info: DropInfo) {
-        viewModel.dragExited(targetId: target.id)
-    }
-
-    func performDrop(info: DropInfo) -> Bool {
-        guard let pieceId = viewModel.draggingPieceId else { return false }
-        let result = viewModel.handleDrop(pieceId: pieceId, onto: target.id)
-        // End dragging regardless of outcome
-        viewModel.endDragging()
-        return result
-    }
-}
 

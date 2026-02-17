@@ -208,7 +208,7 @@ fileprivate struct GameCard: View {
 
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: 16) {
+            HStack(spacing: 12) {
                 GameIconView(gameType: gameType)
                     .frame(width: 70, height: 70)
 
@@ -226,12 +226,11 @@ fileprivate struct GameCard: View {
                     }
 
                     Text(gameType.description)
-                        .font(.subheadline)
+                        .font(.system(size: 13))
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.leading)
                 }
-
-                Spacer()
+                .frame(maxWidth: .infinity, alignment: .leading)
 
                 Image(systemName: "chevron.right")
                     .foregroundColor(.secondary)

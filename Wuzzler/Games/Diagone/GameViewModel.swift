@@ -104,6 +104,7 @@ final class GameViewModel: GameFlowViewModel {
     /// instead of the base submitAnswer(), because win effects include
     /// keyboard dismissal, showMainInput hiding, etc.
     private func triggerWinEffects() {
+        Haptics.prepare()
         finished = true
         finishTime = elapsedTime
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder),
@@ -113,6 +114,7 @@ final class GameViewModel: GameFlowViewModel {
                                             to: nil, from: nil, for: nil)
         }
         saveDailyMeta(started: true, finished: true, elapsedTime: elapsedTime, finishTime: finishTime)
+        saveState()
         stopTimer()
         showMainInput = false
 
@@ -240,10 +242,6 @@ final class GameViewModel: GameFlowViewModel {
             clearMainDiagonal()
         }
         saveState()
-        if finished {
-            finished = false
-            saveDailyMeta(finished: false)
-        }
     }
 
     // MARK: - Drag Hooks

@@ -205,7 +205,9 @@ struct TumblePunsGameView: View {
 
     // MARK: - Final Answer Section
     private var finalAnswerSection: some View {
-        VStack(spacing: 8) {
+        let isLocked = !viewModel.allWordsFilled
+
+        return VStack(spacing: 8) {
             Text("Final Answer")
                 .font(.caption)
                 .fontWeight(.semibold)
@@ -232,7 +234,7 @@ struct TumblePunsGameView: View {
                             .frame(width: 34, height: 42)
                             .background(
                                 RoundedRectangle(cornerRadius: 5)
-                                    .fill(gameAccent.opacity(0.3))
+                                    .fill(isLocked ? Color.boardCell : gameAccent.opacity(0.3))
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: 5)
@@ -258,13 +260,32 @@ struct TumblePunsGameView: View {
                     }
                 }
             }
+            .opacity(isLocked ? 0.4 : 1.0)
             .contentShape(Rectangle())
             .onTapGesture {
-                if !viewModel.finished {
+                if !viewModel.finished && !isLocked {
                     viewModel.selectFinalAnswer()
                 }
             }
             .accessibilityLabel("Final answer")
+            .overlay(alignment: .topTrailing) {
+                if !viewModel.finalAnswer.isEmpty && !viewModel.finished {
+                    Button {
+                        viewModel.clearFinalAnswer()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 14))
+                            .foregroundColor(.secondary)
+                            .padding(8)
+                            .contentShape(Circle().scale(2.5))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Clear final answer")
+                    .offset(x: 16, y: -16)
+                    .zIndex(1)
+                    .transition(.opacity)
+                }
+            }
         }
         .padding(.horizontal, 20)
     }

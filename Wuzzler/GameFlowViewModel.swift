@@ -178,6 +178,7 @@ class GameFlowViewModel: ObservableObject {
     func submitAnswer() {
         guard !finished else { return }
         if checkGameSolved() {
+            Haptics.prepare()
             finished = true
             finishTime = elapsedTime
             stopTimer()

@@ -103,9 +103,17 @@ final class TumblePunsViewModel: GameFlowViewModel {
     }
 
     func selectFinalAnswer() {
+        guard allWordsFilled else { return }
         selectedWordIndex = nil
         isFinalAnswerSelected = true
         engine.selectFinalAnswer()
+    }
+
+    func clearFinalAnswer() {
+        engine.clearFinalAnswer()
+        finalAnswer = engine.state.finalAnswer
+        selectFinalAnswer()
+        debouncedSave()
     }
 
     func typeKey(_ key: String) {
@@ -195,6 +203,12 @@ final class TumblePunsViewModel: GameFlowViewModel {
     }
 
     // MARK: - Computed Properties
+
+    var allWordsFilled: Bool {
+        (0..<4).allSatisfy { i in
+            wordAnswers[i].count >= engine.puzzle.words[i].solution.count
+        }
+    }
 
     var correctWordIndices: Set<Int> {
         engine.correctWordIndices

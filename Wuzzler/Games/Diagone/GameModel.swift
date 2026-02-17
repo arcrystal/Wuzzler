@@ -325,7 +325,25 @@ public final class GameEngine: ObservableObject {
 
         guard let library = PuzzleLibrary.load(resource: resource, subdirectory: subdirectory),
               let words = library[key] else {
-            fatalError("No puzzle found for date \(key)")
+            // No puzzle for this date — use the most recent available puzzle as fallback
+            if let library = PuzzleLibrary.load(resource: resource, subdirectory: subdirectory),
+               let fallbackWords = library.values.first {
+                let up = fallbackWords.map { String($0.uppercased().prefix(6)) }
+                let base = PuzzleConfiguration.defaultConfiguration()
+                let pieceLetters = PuzzleBuilder.pieceLetters(from: up)
+                let config = PuzzleConfiguration(diagonals: base.diagonals, pieceLetters: pieceLetters)
+                self.init(configuration: config)
+                self.puzzleRowWords = up
+                return
+            }
+            // Absolute fallback with hardcoded words
+            let fallback = ["ABCDEF", "GHIJKL", "MNOPQR", "STUVWX", "YZABCD", "EFGHIJ"]
+            let base = PuzzleConfiguration.defaultConfiguration()
+            let pieceLetters = PuzzleBuilder.pieceLetters(from: fallback)
+            let config = PuzzleConfiguration(diagonals: base.diagonals, pieceLetters: pieceLetters)
+            self.init(configuration: config)
+            self.puzzleRowWords = fallback
+            return
         }
 
         // Uppercase and sanitize words to 6 letters
@@ -604,19 +622,6 @@ public final class GameEngine: ObservableObject {
         }
         // Without a loaded word list, treat as unsolved to avoid false positives
         return false
-    }
-
-    // no longer used for validation
-    /// Spell checks the provided word using the system dictionary. Returns true when the
-    /// word contains no spelling errors. `UITextChecker` is available on iOS and
-    /// provides access to the platform dictionary. If for some reason spell checking
-    /// fails the word is considered invalid to avoid false positives.
-    private static func isValidWord(_ word: String) -> Bool {
-        let checker = UITextChecker()
-        let nsWord = word as NSString
-        let range = NSRange(location: 0, length: nsWord.length)
-        let misspelledRange = checker.rangeOfMisspelledWord(in: word, range: range, startingAt: 0, wrap: false, language: "en_US")
-        return misspelledRange.location == NSNotFound
     }
 
     /// Undo the most recent operation. Restores the last state from the history stack

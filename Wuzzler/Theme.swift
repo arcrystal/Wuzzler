@@ -10,14 +10,30 @@ extension UserDefaults {
 }
 
 enum Haptics {
+    // Reusable generators — avoids cold-start stall from creating a new one each call.
+    private static let notificationGenerator = UINotificationFeedbackGenerator()
+    private static let softImpactGenerator = UIImpactFeedbackGenerator(style: .soft)
+
+    /// Warm up the Taptic Engine so the next haptic fires without lag.
+    /// Call this just before a win animation or any time-sensitive sequence.
+    static func prepare() {
+        guard UserDefaults.standard.hapticsEnabled else { return }
+        notificationGenerator.prepare()
+        softImpactGenerator.prepare()
+    }
+
     static func notify(_ type: UINotificationFeedbackGenerator.FeedbackType) {
         guard UserDefaults.standard.hapticsEnabled else { return }
-        UINotificationFeedbackGenerator().notificationOccurred(type)
+        notificationGenerator.notificationOccurred(type)
     }
 
     static func impact(_ style: UIImpactFeedbackGenerator.FeedbackStyle = .soft) {
         guard UserDefaults.standard.hapticsEnabled else { return }
-        UIImpactFeedbackGenerator(style: style).impactOccurred()
+        if style == .soft {
+            softImpactGenerator.impactOccurred()
+        } else {
+            UIImpactFeedbackGenerator(style: style).impactOccurred()
+        }
     }
 }
 

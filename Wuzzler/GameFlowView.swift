@@ -103,18 +103,24 @@ struct GameFlowView<GameContent: View, IconView: View, VM: GameFlowViewModel>: V
                 DispatchQueue.main.asyncAfter(deadline: .now() + hubTransitionDelay) {
                     showHub = true
                 }
-                // Personal best check
-                if StreakManager.isPersonalBest(game: viewModel.gameType, time: viewModel.finishTime) {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                        withAnimation { showPersonalBest = true }
+                // Defer expensive streak/personal-best checks so they don't
+                // block the main thread during the win animation's first frames.
+                let gameType = viewModel.gameType
+                let finishTime = viewModel.finishTime
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                    // Personal best check
+                    if StreakManager.isPersonalBest(game: gameType, time: finishTime) {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                            withAnimation { showPersonalBest = true }
+                        }
                     }
-                }
-                // Streak milestone check
-                let streak = streakForCurrentGame()
-                if [7, 14, 30, 50, 100, 365].contains(streak) || (streak > 0 && streak % 100 == 0) {
-                    milestoneStreak = streak
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-                        withAnimation { showMilestone = true }
+                    // Streak milestone check
+                    let streak = streakForCurrentGame()
+                    if [7, 14, 30, 50, 100, 365].contains(streak) || (streak > 0 && streak % 100 == 0) {
+                        milestoneStreak = streak
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
+                            withAnimation { showMilestone = true }
+                        }
                     }
                 }
             }

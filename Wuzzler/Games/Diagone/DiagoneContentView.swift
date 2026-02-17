@@ -1,11 +1,5 @@
 import SwiftUI
 
-private extension UIApplication {
-    func endEditing() {
-        sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-    }
-}
-
 /// Game-specific content for Diagone. Wrapped by GameFlowView in the coordinator.
 struct DiagoneGameView: View {
     @ObservedObject var viewModel: GameViewModel
@@ -64,18 +58,21 @@ struct DiagoneGameView: View {
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in
-            UIApplication.shared.endEditing()
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
-            UIApplication.shared.endEditing()
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
             if viewModel.finished {
-                UIApplication.shared.endEditing()
-                DispatchQueue.main.async { UIApplication.shared.endEditing() }
+                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
             }
         }
         .environmentObject(viewModel)
+        .onDisappear {
+            winHighlightTimer?.invalidate()
+            winHighlightTimer = nil
+        }
     }
 
     // MARK: - Chip Pane Layout

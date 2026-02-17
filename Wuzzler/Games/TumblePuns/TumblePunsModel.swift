@@ -50,10 +50,7 @@ struct TumblePunsState: Codable {
 
     mutating func appendLetter(_ letter: String, to index: Int) {
         guard index >= 0 && index < 4 else { return }
-        let maxLength = wordAnswers[index].count < 20 ? 20 : wordAnswers[index].count
-        if wordAnswers[index].count < maxLength {
-            wordAnswers[index] += letter.uppercased()
-        }
+        wordAnswers[index] += letter.uppercased()
     }
 
     mutating func appendLetterToFinal(_ letter: String) {

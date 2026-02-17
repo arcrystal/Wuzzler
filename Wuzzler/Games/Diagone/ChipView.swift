@@ -1,5 +1,4 @@
 import SwiftUI
-import UniformTypeIdentifiers
 
 /// Visual representation of a draggable diagonal word chip. Each chip renders its
 /// letters in a diagonal staircase pattern with upright square tiles whose corners
@@ -88,47 +87,3 @@ struct ChipView: View {
     }
 }
 
-/// A view used as the drag preview for a chip. It mirrors the appearance of
-/// `ChipView` but doesn't participate in layout.
-fileprivate struct ChipDragPreview: View {
-    let piece: GamePiece
-    let cellSize: CGFloat
-
-    var body: some View {
-        let tileSize = cellSize * 0.85
-        let step = tileSize * 0.72
-        let totalSpan = step * CGFloat(piece.length - 1) + tileSize
-
-        ZStack(alignment: .topLeading) {
-            ForEach(Array(piece.letters.enumerated()), id: \.offset) { index, element in
-                let ch = String(element)
-                Text(ch)
-                    .font(.system(size: tileSize * 0.6, weight: .bold, design: .rounded))
-                    .foregroundColor(.letter)
-                    .frame(width: tileSize, height: tileSize)
-                    .background(
-                        RoundedRectangle(cornerRadius: tileSize * 0.15, style: .continuous)
-                            .fill(Color.boardCell)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: tileSize * 0.15, style: .continuous)
-                            .stroke(Color.gridLine, lineWidth: 1)
-                    )
-                    .offset(
-                        x: CGFloat(index) * step,
-                        y: CGFloat(index) * step
-                    )
-            }
-        }
-        .frame(width: totalSpan, height: totalSpan)
-    }
-}
-
-/// A dummy drop delegate on the chip itself. Without this SwiftUI will not
-/// correctly clear the dragging state on drop when dragging within the same
-/// column. The delegate does nothing but is required to avoid a bug in
-/// SwiftUI prior to iOS 18 where .onDrag would not reset `isDragging` for
-/// items dropped onto themselves.
-fileprivate struct DummyDropDelegate: DropDelegate {
-    func performDrop(info: DropInfo) -> Bool { return false }
-}

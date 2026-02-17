@@ -117,27 +117,3 @@ struct DiagoneLoadingView: View {
     }
 }
 
-fileprivate struct GridIcon6x6: View {
-    @Environment(\.gameAccent) private var gameAccent
-    let size: CGFloat
-    var body: some View {
-        let cell = size / 6.0
-        VStack(spacing: 0) {
-            ForEach(0..<6, id: \.self) { r in
-                HStack(spacing: 0) {
-                    ForEach(0..<6, id: \.self) { c in
-                        let isMain = (r == c)
-                        Rectangle()
-                            .fill(isMain ? gameAccent : Color.boardCell)
-                            .overlay(Rectangle().stroke(Color.gridLine, lineWidth: 0.75))
-                            .frame(width: cell, height: cell)
-                    }
-                }
-            }
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.gridLine, lineWidth: 1))
-        .frame(width: size, height: size)
-        .accessibilityHidden(true)
-    }
-}
