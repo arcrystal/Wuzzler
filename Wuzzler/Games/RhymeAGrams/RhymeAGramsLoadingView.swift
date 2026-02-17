@@ -45,16 +45,16 @@ struct RhymeAGramsLoadingView: View {
 
             RhymeAGramsIconView(size: 80)
 
-            VStack(spacing: 6) {
+            VStack(spacing: 12) {
                 Text(formattedDate)
                     .font(.system(size: 36, weight: .heavy, design: .serif))
                     .multilineTextAlignment(.center)
 
-                Text("Find four 4-letter rhyming words from a pyramid of letters")
-                    .font(.title3)
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 24)
+                Button(action: { showTutorial = true }) {
+                    Label("How to Play", systemImage: "questionmark.circle")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundColor(gameAccent)
+                }
             }
 
             Button {

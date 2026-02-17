@@ -69,8 +69,7 @@ private struct DiagoneCoordinatorView: View {
                     onBackToHome: onBackToHome,
                     onExitHub: {
                         if viewModel.finished { viewModel.showMainInput = false }
-                    },
-                    hubTransitionDelay: 4.0  // Diagone has row highlight animation after win
+                    }
                 )
             }
         }

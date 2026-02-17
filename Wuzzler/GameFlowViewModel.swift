@@ -32,6 +32,10 @@ class GameFlowViewModel: ObservableObject {
     /// Subclasses should compute this from their animation parameters.
     open var winAnimationDuration: TimeInterval { 1.0 }
 
+    /// Time from start of win sequence to when the haptic fires (last letter bounce).
+    /// Defaults to winAnimationDuration; Diagone overrides with its own timing.
+    open var hapticDelay: TimeInterval { winAnimationDuration }
+
     /// Whether this is an archive (non-today) puzzle.
     var isArchivePuzzle: Bool {
         !Calendar.current.isDateInToday(puzzleDate)
@@ -178,13 +182,18 @@ class GameFlowViewModel: ObservableObject {
     func submitAnswer() {
         guard !finished else { return }
         if checkGameSolved() {
-            Haptics.prepare()
+            // Set minimal state and start the animation immediately.
             finished = true
             finishTime = elapsedTime
             stopTimer()
-            saveDailyMeta(started: true, finished: true, elapsedTime: elapsedTime, finishTime: finishTime)
-            saveState()
             runWinSequence()
+
+            // Defer expensive work (persistence) so it doesn't
+            // block the first frames of the win animation.
+            DispatchQueue.main.async { [self] in
+                saveDailyMeta(started: true, finished: true, elapsedTime: elapsedTime, finishTime: finishTime)
+                saveState()
+            }
         } else {
             triggerIncorrectFeedback()
             onIncorrectAttempt()
@@ -194,11 +203,8 @@ class GameFlowViewModel: ObservableObject {
     // MARK: - Win Sequence
 
     open func runWinSequence() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
-            self?.winWaveTrigger &+= 1
-        }
-        let delay = 0.05 + winAnimationDuration
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+        winWaveTrigger &+= 1
+        DispatchQueue.main.asyncAfter(deadline: .now() + hapticDelay) {
             Haptics.notify(.success)
         }
     }

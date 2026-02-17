@@ -8,7 +8,6 @@ final class GameViewModel: GameFlowViewModel {
     @Published private(set) var engine: GameEngine
     @Published public var dragHoverTargetId: String? = nil
     @Published public var showMainInput: Bool = false
-    @Published public var showConfetti: Bool = false
     @Published public var mainInput: [String] = Array(repeating: "", count: 6)
     @Published public var draggingPieceId: String? = nil
     @Published public var fadingPanePieceIds: Set<String> = []
@@ -51,7 +50,6 @@ final class GameViewModel: GameFlowViewModel {
         winWaveTask?.cancel()
         showMainInput = false
         mainInput = Array(repeating: "", count: 6)
-        showConfetti = false
         fadingPanePieceIds = []
         draggingPieceId = nil
         dragHoverTargetId = nil
@@ -81,22 +79,19 @@ final class GameViewModel: GameFlowViewModel {
 
     // MARK: - Diagone-Specific Win Sequence
 
+    /// 11 wave steps × 70ms + 200ms tail = 900ms to last bounce peak.
+    override var hapticDelay: TimeInterval { 0.07 * 10 + 0.2 }
+
     override func runWinSequence() {
         winWaveTask?.cancel()
-        showConfetti = false
-
-        let totalSteps = 11
-        let perStep: Duration = .milliseconds(70)
-        let tail: Duration = .milliseconds(420)
 
         winWaveTask = Task(priority: .userInitiated) { @MainActor in
             self.winWaveTrigger &+= 1
 
             let clock = ContinuousClock()
-            try? await clock.sleep(for: perStep * (totalSteps - 1) + tail)
+            try? await clock.sleep(for: .milliseconds(Int(self.hapticDelay * 1000)))
 
             Haptics.notify(.success)
-            self.startConfettiSequence()
         }
     }
 
@@ -104,23 +99,22 @@ final class GameViewModel: GameFlowViewModel {
     /// instead of the base submitAnswer(), because win effects include
     /// keyboard dismissal, showMainInput hiding, etc.
     private func triggerWinEffects() {
-        Haptics.prepare()
+        // Set minimal state and start the animation immediately —
+        // identical to the "View This Puzzle" replay path.
         finished = true
         finishTime = elapsedTime
-        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder),
-                                        to: nil, from: nil, for: nil)
-        DispatchQueue.main.async {
-            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder),
-                                            to: nil, from: nil, for: nil)
-        }
-        saveDailyMeta(started: true, finished: true, elapsedTime: elapsedTime, finishTime: finishTime)
-        saveState()
         stopTimer()
         showMainInput = false
-
-        winWaveTask?.cancel()
-        showConfetti = false
         runWinSequence()
+
+        // Defer expensive work (keyboard, persistence) so it doesn't
+        // block the first frames of the win animation.
+        DispatchQueue.main.async { [self] in
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder),
+                                            to: nil, from: nil, for: nil)
+            saveDailyMeta(started: true, finished: true, elapsedTime: elapsedTime, finishTime: finishTime)
+            saveState()
+        }
     }
 
     private func triggerDiagoneIncorrectFeedback() {
@@ -142,24 +136,6 @@ final class GameViewModel: GameFlowViewModel {
 
     deinit {
         winWaveTask?.cancel()
-    }
-
-    // MARK: - Confetti Sequence
-
-    private func startConfettiSequence() {
-        withAnimation { self.showConfetti = true }
-        let firstPause: TimeInterval = 1.1
-        DispatchQueue.main.asyncAfter(deadline: .now() + firstPause) { [weak self] in
-            guard let self = self else { return }
-            withAnimation(.easeOut(duration: 0.08)) { self.showConfetti = false }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { [weak self] in
-                withAnimation { self?.showConfetti = true }
-            }
-        }
-        let totalDuration: TimeInterval = 2.8
-        DispatchQueue.main.asyncAfter(deadline: .now() + totalDuration) { [weak self] in
-            withAnimation { self?.showConfetti = false }
-        }
     }
 
     // MARK: - Board Persistence

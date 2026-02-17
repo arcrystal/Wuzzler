@@ -24,10 +24,6 @@ struct GameFlowView<GameContent: View, IconView: View, VM: GameFlowViewModel>: V
     var onExitHub: (() -> Void)? = nil
     /// Optional extra action to run on appear if extra init is needed (e.g. TumblePuns letter positions).
     var onExtraAppear: (() -> Void)? = nil
-    /// Delay before transitioning to hub after win. Games with their own
-    /// post-win sequence (like Diagone's row highlights) can set this higher.
-    var hubTransitionDelay: TimeInterval = 2.5
-
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.gameAccent) private var gameAccent
 
@@ -98,11 +94,24 @@ struct GameFlowView<GameContent: View, IconView: View, VM: GameFlowViewModel>: V
         }
         .onChange(of: viewModel.finished) { _, didFinish in
             if didFinish {
-                UIApplication.shared.endEditing()
-                confettiTrigger += 1
-                DispatchQueue.main.asyncAfter(deadline: .now() + hubTransitionDelay) {
+                DispatchQueue.main.async { UIApplication.shared.endEditing() }
+
+                // 1. Wave is already playing (runWinSequence fired it).
+                // 2. Haptic fires at hapticDelay (handled by runWinSequence).
+                // 3. Confetti right after haptic (first win only — replay
+                //    doesn't toggle finished, so this onChange won't fire).
+                let confettiDelay = viewModel.hapticDelay + 0.1
+                DispatchQueue.main.asyncAfter(deadline: .now() + confettiDelay) {
+                    confettiTrigger += 1
+                }
+
+                // 4. Switch to hub 3/4 through the confetti animation.
+                let confettiVisualDuration: TimeInterval = 3.5
+                let hubDelay = confettiDelay + confettiVisualDuration * 0.75
+                DispatchQueue.main.asyncAfter(deadline: .now() + hubDelay) {
                     showHub = true
                 }
+
                 // Defer expensive streak/personal-best checks so they don't
                 // block the main thread during the win animation's first frames.
                 let gameType = viewModel.gameType
@@ -157,17 +166,12 @@ struct GameFlowView<GameContent: View, IconView: View, VM: GameFlowViewModel>: V
                     .font(.largeTitle)
                     .fontWeight(.bold)
 
-                Text(gameDescription)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, 40)
-
-                Button(action: { showTutorial = true }) {
-                    Label("How to Play", systemImage: "questionmark.circle")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundColor(gameAccent)
+                if hubMode != .completed {
+                    Button(action: { showTutorial = true }) {
+                        Label("How to Play", systemImage: "questionmark.circle")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundColor(gameAccent)
+                    }
                 }
             }
 

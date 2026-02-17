@@ -49,16 +49,16 @@ struct DiagoneLoadingView: View {
             Spacer(minLength: 80)
             DiagoneIconView(size: 80)
 
-            VStack(spacing: 6) {
+            VStack(spacing: 12) {
                 Text(formattedDate)
                     .font(.system(size: 36, weight: .heavy, design: .serif))
                     .multilineTextAlignment(.center)
 
-                Text("Drag and drop diagonals to spell six horizontal words")
-                    .font(.title3)
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 24)
+                Button(action: { showTutorial = true }) {
+                    Label("How to Play", systemImage: "questionmark.circle")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundColor(gameAccent)
+                }
             }
 
             Button {
