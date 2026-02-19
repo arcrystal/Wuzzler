@@ -273,7 +273,7 @@ struct GameFlowView<GameContent: View, IconView: View, VM: GameFlowViewModel>: V
                         showHub = false
                         viewModel.runWinSequence()
                     }) {
-                        Text(viewModel.isArchivePuzzle ? "View This Puzzle" : "View Today's Puzzle")
+                        Text("View Puzzle")
                             .font(.headline)
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)

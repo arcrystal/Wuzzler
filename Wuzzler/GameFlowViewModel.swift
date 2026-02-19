@@ -203,9 +203,14 @@ class GameFlowViewModel: ObservableObject {
     // MARK: - Win Sequence
 
     open func runWinSequence() {
-        winWaveTrigger &+= 1
-        DispatchQueue.main.asyncAfter(deadline: .now() + hapticDelay) {
-            Haptics.notify(.success)
+        // Defer to next run loop so SwiftUI has time to mount the game
+        // view when replaying from the hub (showHub toggles first).
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.winWaveTrigger &+= 1
+            DispatchQueue.main.asyncAfter(deadline: .now() + self.hapticDelay) {
+                Haptics.notify(.success)
+            }
         }
     }
 
