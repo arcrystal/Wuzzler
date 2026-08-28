@@ -7,7 +7,7 @@
 3. Enable GitHub Pages with **GitHub Actions** as its source. Confirm the privacy, support, and puzzle-content URLs return successfully over HTTPS.
 4. Enter the Pages privacy/support URLs in App Store Connect. Enter a verified private feedback email and an international-format review phone number directly in App Store Connect.
 5. Complete the age-rating and App Privacy questionnaires from the current data map. No account is required; Game Center is optional; there is no chat, advertising, purchasing, tracking, or unrestricted web browsing.
-6. Install stable Xcode 26.6, sign in to the correct Apple developer account, and allow automatic signing to create or select an Apple Distribution identity and App Store profile.
+6. Install stable Xcode 26.6, sign in to the correct Apple developer account, and allow automatic signing to create or select an Apple Distribution identity and App Store profile. The hosted macOS 15 runner is temporarily pinned to the newest stable version it actually provides (Xcode 26.3); move CI to 26.6 as soon as that image becomes available.
 
 ## Prepare a candidate
 
