@@ -12,13 +12,35 @@ concurrency:
 jobs:
   validate-test-archive:
     runs-on: macos-15
-    timeout-minutes: 45
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
       - uses: maxim-lobanov/setup-xcode@v1
         with:
           # GitHub's macOS 15 image currently tops out at stable Xcode 26.3.
           xcode-version: '26.3'
+      - name: Install matching iOS Simulator runtime
+        run: |
+          xcodebuild -downloadPlatform iOS
+          simulator_id=$(python3 - <<'PY'
+          import json
+          import subprocess
+
+          payload = json.loads(
+              subprocess.check_output(["xcrun", "simctl", "list", "devices", "available", "-j"])
+          )
+          candidates = [
+              device["udid"]
+              for devices in payload["devices"].values()
+              for device in devices
+              if device.get("isAvailable") and device.get("name", "").startswith("iPhone")
+          ]
+          if not candidates:
+              raise SystemExit("No available iPhone Simulator after runtime installation")
+          print(candidates[0])
+          PY
+          )
+          echo "WUZ_SIMULATOR_ID=$simulator_id" >> "$GITHUB_ENV"
       - name: Validate puzzle coverage
         run: |
           python3 -m unittest discover -s Scripts/tests
@@ -29,7 +51,7 @@ jobs:
           xcodebuild test \
             -project Wuzzler.xcodeproj \
             -scheme Wuzzler \
-            -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' \
+            -destination "platform=iOS Simulator,id=$WUZ_SIMULATOR_ID" \
             -resultBundlePath "$RUNNER_TEMP/WuzzlerTests.xcresult" \
             | tee "$RUNNER_TEMP/test.log"
       - name: Build unsigned Release archive
