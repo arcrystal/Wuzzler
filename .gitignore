@@ -62,8 +62,10 @@ playground.xcworkspace
 
 # ---- Tools caches ----
 .swiftlint_cache
+.claude/
+__pycache__/
+*.pyc
 
 # ---- Misc editors ----
 *.orig
 *.tmp
-*.json

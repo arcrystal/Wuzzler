@@ -38,10 +38,7 @@ struct GameFlowView<GameContent: View, IconView: View, VM: GameFlowViewModel>: V
     @State private var milestoneStreak: Int = 0
 
     private var archiveDateLabel: String {
-        let fmt = DateFormatter()
-        fmt.dateStyle = .medium
-        fmt.timeStyle = .none
-        return fmt.string(from: viewModel.puzzleDate)
+        PuzzleDay.displayDate(viewModel.puzzleDate)
     }
 
     private enum HubMode { case notStarted, inProgress, completed }
@@ -117,6 +114,7 @@ struct GameFlowView<GameContent: View, IconView: View, VM: GameFlowViewModel>: V
                 let gameType = viewModel.gameType
                 let finishTime = viewModel.finishTime
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                    guard viewModel.countsTowardStats else { return }
                     // Personal best check
                     if StreakManager.isPersonalBest(game: gameType, time: finishTime) {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
@@ -130,6 +128,16 @@ struct GameFlowView<GameContent: View, IconView: View, VM: GameFlowViewModel>: V
                         DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
                             withAnimation { showMilestone = true }
                         }
+                    }
+
+                    LeaderboardService.shared.submitDailySolve(
+                        game: gameType,
+                        time: finishTime,
+                        date: viewModel.puzzleDate
+                    )
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        LeaderboardService.shared.submitSweepIfComplete(on: viewModel.puzzleDate)
+                        AchievementService.shared.reportDailySolve(game: gameType, date: viewModel.puzzleDate)
                     }
                 }
             }
@@ -195,7 +203,7 @@ struct GameFlowView<GameContent: View, IconView: View, VM: GameFlowViewModel>: V
                     }
 
                 case .inProgress:
-                    Text(gameCleared ? "Game cleared." : (viewModel.isArchivePuzzle ? "You're in the middle of this puzzle." : "You're in the middle of today's puzzle."))
+                    Text(gameCleared ? "Game cleared." : (viewModel.countsTowardStats ? "You're in the middle of today's puzzle." : "Practice puzzle in progress."))
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -262,7 +270,7 @@ struct GameFlowView<GameContent: View, IconView: View, VM: GameFlowViewModel>: V
                             .foregroundColor(gameAccent)
                     }
 
-                    Text(viewModel.isArchivePuzzle ? archiveDateLabel : "Check back tomorrow for a new puzzle!")
+                    Text(viewModel.countsTowardStats ? "Check back tomorrow for a new puzzle!" : "Practice: \(archiveDateLabel)")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)

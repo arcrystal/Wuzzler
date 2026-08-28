@@ -61,17 +61,11 @@ struct DiagoneLoadingView: View {
                 }
             }
 
-            Button {
-                onStart()   // this triggers startGame + view swap
-            } label: {
-                Text("Play")
-                    .font(.title3.weight(.semibold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(Capsule().fill(gameAccent))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 32)
-            }
+            PuzzlePreparationControl(
+                gameName: "Diagone",
+                accessibilityPrefix: "diagone",
+                onStart: onStart
+            )
 
             Spacer()
 
@@ -104,16 +98,10 @@ struct DiagoneLoadingView: View {
     }
 
     private var formattedDate: String {
-        let df = DateFormatter()
-        df.dateStyle = .long
-        df.timeStyle = .none
-        return df.string(from: date)
+        PuzzleDay.displayDate(date, style: .long)
     }
 
     private var numberString: String {
-        let df = DateFormatter(); df.dateFormat = "yyyyMMdd"
-        let seed = Int(df.string(from: date)) ?? 0
-        return "No. \(seed % 5000)"
+        "No. \(PuzzleDay.puzzleNumber(for: date).dropFirst())"
     }
 }
-

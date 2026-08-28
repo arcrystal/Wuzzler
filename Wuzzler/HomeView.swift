@@ -1,279 +1,284 @@
 import SwiftUI
 
 struct HomeView: View {
-    let onGameSelected: (GameType, Date) -> Void
-    @State private var showMenu = false
-    @State private var progress = StreakManager.todayProgress()
-    @State private var streakInfo = StreakManager.streakInfo()
+    let onGameSelected: (GameLaunch) -> Void
+
+    @State private var availability: [GameType: Bool] = [:]
+    @State private var statuses: [GameType: PlayCardStatus] = [:]
     @State private var showDailySweep = false
+    @AppStorage("last_daily_sweep_celebrated") private var lastDailySweepCelebrated = ""
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                // Header
-                HStack {
-                    Button { showMenu = true } label: {
-                        Image(systemName: "gearshape")
-                            .font(.title3.weight(.medium))
-                            .foregroundColor(.primary)
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 18) {
+                    playHeader
+
+                    ForEach(GameType.allCases) { game in
+                        PlayGameCard(
+                            gameType: game,
+                            date: PuzzleDay.today,
+                            status: statuses[game] ?? .play,
+                            isAvailable: availability[game] ?? false,
+                            onTap: { onGameSelected(.daily(game)) }
+                        )
+                        .accessibilityIdentifier("play-game-card-\(game.rawValue)")
                     }
-                    .accessibilityLabel("Menu")
-                    Spacer()
-                    Text("Wuzzler")
-                        .font(.largeTitle.weight(.bold))
-                    Spacer()
-                    Color.clear
-                        .frame(width: 28, height: 28)
                 }
-                .padding(.top, 40)
-
-                // Greeting + Streak Banner
-                streakBanner
-
-                // Daily Progress Ring
-                dailyProgressSection
-
-                // Game Cards
-                ForEach(GameType.allCases) { game in
-                    GameCardWithArchive(gameType: game, progress: progress, onTap: {
-                        onGameSelected(game, Date())
-                    }, onArchiveDateSelected: { date in
-                        onGameSelected(game, date)
-                    })
-                }
-
-                Spacer(minLength: 40)
+                .frame(maxWidth: 700)
+                .padding(.horizontal, 20)
+                .padding(.top, 18)
+                .padding(.bottom, 18)
+                .frame(maxWidth: .infinity)
             }
-            .padding(.horizontal, 20)
-        }
-        .background(Color(UIColor.systemGray6))
-        .sheet(isPresented: $showMenu) {
-            MenuView()
-        }
-        .onAppear {
-            refreshProgress()
-        }
-        .overlay {
-            if showDailySweep {
-                DailySweepCelebration {
-                    showDailySweep = false
+            .scrollIndicators(.hidden)
+            .background(Color.wuzzlerCanvas.ignoresSafeArea())
+            .toolbar(.hidden, for: .navigationBar)
+            .accessibilityIdentifier("play-screen")
+            .onAppear(perform: refresh)
+            .onReceive(NotificationCenter.default.publisher(for: .puzzleContentDidRefresh)) { _ in
+                refresh()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .gameProgressDidChange)) { _ in
+                refresh()
+            }
+            .overlay {
+                if showDailySweep {
+                    DailySweepCelebration { showDailySweep = false }
                 }
             }
         }
     }
 
-    private func refreshProgress() {
-        let newProgress = StreakManager.todayProgress()
-        let wasAllComplete = progress.allComplete
-        progress = newProgress
-        streakInfo = StreakManager.streakInfo()
-        // Trigger Daily Sweep celebration if just completed all 3
-        if newProgress.allComplete && !wasAllComplete {
+    private var playHeader: some View {
+        VStack(spacing: 22) {
+            VStack(spacing: 8) {
+                WuzzlerWordmark()
+                    .frame(maxWidth: .infinity)
+
+                HStack {
+                    Spacer()
+
+                    NavigationLink {
+                        ArchiveView(onGameSelected: onGameSelected)
+                    } label: {
+                        Label("Archive", systemImage: "calendar")
+                            .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                            .padding(.horizontal, 12)
+                            .frame(minHeight: 44)
+                            .background(Color.wuzzlerSurface.opacity(0.92), in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("play-archive-button")
+                }
+            }
+
+            VStack(spacing: 4) {
+                Text("\(StreakManager.greeting).")
+                    .font(.system(.title2, design: .serif, weight: .bold))
+                Text("Pick a game and play.")
+                    .font(.system(.title3, design: .serif))
+                    .foregroundStyle(.secondary)
+            }
+            .multilineTextAlignment(.center)
+            .accessibilityElement(children: .combine)
+        }
+        .padding(.bottom, 8)
+    }
+
+    private func refresh() {
+        availability = Dictionary(uniqueKeysWithValues: GameType.allCases.map { game in
+            (game, PuzzleContentService.shared.hasPuzzle(for: game, on: PuzzleDay.today))
+        })
+        statuses = Dictionary(uniqueKeysWithValues: GameType.allCases.map { game in
+            let available = PuzzleContentService.shared.hasPuzzle(for: game, on: PuzzleDay.today)
+            return (game, PlayCardStatus(game: game, date: PuzzleDay.today, isAvailable: available))
+        })
+
+        let progress = StreakManager.todayProgress()
+        if progress.allComplete && lastDailySweepCelebrated != Self.todayKey {
+            lastDailySweepCelebrated = Self.todayKey
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 showDailySweep = true
             }
         }
     }
 
-    // MARK: - Streak Banner
-    private var streakBanner: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(StreakManager.greeting)
-                    .font(.headline)
-                    .foregroundColor(.primary)
-
-                if progress.allComplete {
-                    Text("All puzzles complete!")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                } else {
-                    let remaining = 3 - progress.completedCount
-                    Text("\(remaining) puzzle\(remaining == 1 ? "" : "s") remaining today")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-            }
-
-            Spacer()
-
-            // Streak flame
-            if streakInfo.combinedStreak > 0 {
-                HStack(spacing: 4) {
-                    Image(systemName: "flame.fill")
-                        .foregroundStyle(.orange)
-                        .font(.title3)
-                    Text("\(streakInfo.combinedStreak)")
-                        .font(.title3.weight(.bold).monospacedDigit())
-                        .foregroundColor(.primary)
-                }
-                .accessibilityLabel("\(streakInfo.combinedStreak) day streak")
-            }
-        }
-        .padding(.horizontal, 4)
-    }
-
-    // MARK: - Daily Progress Section
-    private var dailyProgressSection: some View {
-        HStack(spacing: 16) {
-            // Progress ring
-            ZStack {
-                Circle()
-                    .stroke(Color.gray.opacity(0.15), lineWidth: 5)
-
-                Circle()
-                    .trim(from: 0, to: CGFloat(progress.completedCount) / 3.0)
-                    .stroke(
-                        progress.allComplete ? Color.orange : Color.accentColor,
-                        style: StrokeStyle(lineWidth: 5, lineCap: .round)
-                    )
-                    .rotationEffect(.degrees(-90))
-                    .animation(.spring(response: 0.6), value: progress.completedCount)
-
-                Text("\(progress.completedCount)/3")
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
-                    .foregroundColor(.primary)
-            }
-            .frame(width: 44, height: 44)
-
-            // Per-game status dots
-            VStack(alignment: .leading, spacing: 6) {
-                progressDot(game: .diagone, done: progress.diagoneCompleted)
-                progressDot(game: .rhymeAGrams, done: progress.rhymeAGramsCompleted)
-                progressDot(game: .tumblePuns, done: progress.tumblePunsCompleted)
-            }
-
-            Spacer()
-
-            // Per-game streaks (compact)
-            if streakInfo.diagoneStreak > 0 || streakInfo.rhymeAGramsStreak > 0 || streakInfo.tumblePunsStreak > 0 {
-                VStack(alignment: .trailing, spacing: 4) {
-                    miniStreak(game: .diagone, count: streakInfo.diagoneStreak)
-                    miniStreak(game: .rhymeAGrams, count: streakInfo.rhymeAGramsStreak)
-                    miniStreak(game: .tumblePuns, count: streakInfo.tumblePunsStreak)
-                }
-            }
-        }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color(UIColor.systemBackground))
-        )
-        .shadow(radius: 1, y: 1)
-    }
-
-    private func progressDot(game: GameType, done: Bool) -> some View {
-        HStack(spacing: 6) {
-            Circle()
-                .fill(done ? game.accentColor : Color.gray.opacity(0.2))
-                .frame(width: 8, height: 8)
-            Text(game.displayName)
-                .font(.caption.weight(done ? .semibold : .regular))
-                .foregroundColor(done ? .primary : .secondary)
-        }
-    }
-
-    private func miniStreak(game: GameType, count: Int) -> some View {
-        Group {
-            if count > 0 {
-                HStack(spacing: 2) {
-                    Image(systemName: "flame.fill")
-                        .font(.system(size: 9))
-                        .foregroundColor(game.accentColor)
-                    Text("\(count)")
-                        .font(.caption2.weight(.bold).monospacedDigit())
-                        .foregroundColor(game.accentColor)
-                }
-            } else {
-                Color.clear.frame(height: 12)
-            }
-        }
+    private static var todayKey: String {
+        PuzzleDay.storageKey(for: Date())
     }
 }
 
-// MARK: - Game Card
+private enum PlayCardStatus: Equatable {
+    case play
+    case inProgress
+    case completed(TimeInterval)
+    case comingSoon
 
-fileprivate struct GameCard: View {
-    let gameType: GameType
-    let progress: StreakManager.DailyProgress
-    let onTap: () -> Void
-
-    private var isTodayCompleted: Bool {
-        switch gameType {
-        case .diagone: return progress.diagoneCompleted
-        case .rhymeAGrams: return progress.rhymeAGramsCompleted
-        case .tumblePuns: return progress.tumblePunsCompleted
+    init(game: GameType, date: Date, isAvailable: Bool) {
+        guard isAvailable else {
+            self = .comingSoon
+            return
+        }
+        switch StreakManager.puzzleStatus(game: game, day: PuzzleDay.storageKey(for: date)) {
+        case .notStarted:
+            self = .play
+        case .inProgress:
+            self = .inProgress
+        case .completed(let time):
+            self = .completed(time)
         }
     }
+
+    var title: String {
+        switch self {
+        case .play: return "Play"
+        case .inProgress: return "In Progress"
+        case .completed(let time): return "Completed · \(Self.format(time))"
+        case .comingSoon: return "Coming Soon"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .play: return "play.fill"
+        case .inProgress: return "arrow.right"
+        case .completed: return "checkmark"
+        case .comingSoon: return "lock.fill"
+        }
+    }
+
+    private static func format(_ time: TimeInterval) -> String {
+        let total = max(0, Int(time.rounded()))
+        return String(format: "%d:%02d", total / 60, total % 60)
+    }
+}
+
+private struct PlayGameCard: View {
+    let gameType: GameType
+    let date: Date
+    let status: PlayCardStatus
+    let isAvailable: Bool
+    let onTap: () -> Void
 
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: 12) {
-                GameIconView(gameType: gameType)
-                    .frame(width: 70, height: 70)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 6) {
-                        Text(gameType.displayName)
-                            .font(.title2.weight(.semibold))
-                            .foregroundColor(.primary)
-
-                        if isTodayCompleted {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(gameType.accentColor)
-                                .font(.subheadline)
-                        }
-                    }
+            HStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 9) {
+                    Text(gameType.displayName)
+                        .font(.system(.title2, design: .rounded, weight: .heavy))
+                        .lineLimit(2)
 
                     Text(gameType.description)
-                        .font(.system(size: 13))
-                        .foregroundColor(.secondary)
+                        .font(.system(.subheadline, design: .rounded))
+                        .foregroundStyle(Color.wuzzlerCardText.opacity(0.76))
                         .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Spacer(minLength: 4)
+
+                    Text(Self.cardDateFormatter.string(from: date))
+                        .font(.system(.subheadline, design: .rounded, weight: .bold))
+
+                    Label(status.title, systemImage: status.symbol)
+                        .font(.system(.caption, design: .rounded, weight: .bold))
+                        .padding(.horizontal, 10)
+                        .frame(minHeight: 30)
+                        .background(Color.wuzzlerCardText.opacity(0.12), in: Capsule())
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                Image(systemName: "chevron.right")
-                    .foregroundColor(.secondary)
+                GameCardArtwork(gameType: gameType)
+                    .frame(width: 86, height: 96)
+                    .accessibilityHidden(true)
             }
+            .foregroundStyle(Color.wuzzlerCardText)
             .padding(20)
-            .background(Color(UIColor.systemBackground))
+            .frame(maxWidth: .infinity, minHeight: 176, alignment: .leading)
+            .background(gameType.cardColor, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel("\(gameType.displayName)\(isTodayCompleted ? ", completed" : "")")
-        .accessibilityHint(gameType.description)
+        .buttonStyle(PlayCardButtonStyle())
+        .disabled(!isAvailable)
+        .opacity(isAvailable ? 1 : 0.62)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(gameType.displayName), \(status.title), \(Self.cardDateFormatter.string(from: date))")
+        .accessibilityHint(isAvailable ? gameType.description : "This puzzle is not available yet")
+    }
+
+    private static let cardDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.calendar = PuzzleDay.calendar
+        formatter.locale = Locale.current
+        formatter.timeZone = PuzzleDay.timeZone
+        formatter.dateFormat = "EEEE, MMM d"
+        return formatter
+    }()
+}
+
+private struct PlayCardButtonStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.985 : 1)
+            .shadow(color: .black.opacity(configuration.isPressed ? 0.06 : 0.13), radius: configuration.isPressed ? 3 : 10, y: configuration.isPressed ? 2 : 6)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.14), value: configuration.isPressed)
     }
 }
 
-// MARK: - Game Card + Archive Row
-
-fileprivate struct GameCardWithArchive: View {
-    let gameType: GameType
-    let progress: StreakManager.DailyProgress
-    let onTap: () -> Void
-    let onArchiveDateSelected: (Date) -> Void
+private struct WuzzlerWordmark: View {
+    private let letters = Array("WUZZLER").map(String.init)
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Game card with bottom corners unrounded
-            GameCard(gameType: gameType, progress: progress, onTap: onTap)
-                .clipShape(UnevenRoundedRectangle(
-                    topLeadingRadius: 16, bottomLeadingRadius: 0,
-                    bottomTrailingRadius: 0, topTrailingRadius: 16
-                ))
-
-            // Archive row with top corners unrounded
-            ArchiveRowView(gameType: gameType, onDateSelected: onArchiveDateSelected)
-                .background(Color(UIColor.systemBackground))
-                .clipShape(UnevenRoundedRectangle(
-                    topLeadingRadius: 0, bottomLeadingRadius: 16,
-                    bottomTrailingRadius: 16, topTrailingRadius: 0
-                ))
+        HStack(spacing: 3) {
+            ForEach(Array(letters.enumerated()), id: \.offset) { index, letter in
+                Text(letter)
+                    .font(.system(size: 18, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Color.white)
+                    .frame(width: 29, height: 31)
+                    .background(tileColor(at: index), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+                    .rotationEffect(.degrees(index.isMultiple(of: 2) ? -1.2 : 1.2))
+            }
         }
-        .shadow(radius: 2, y: 1)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Wuzzler")
+    }
+
+    private func tileColor(at index: Int) -> Color {
+        switch index % 3 {
+        case 0: return .diagoneAccent
+        case 1: return .rhymeAGramsAccent
+        default: return .tumblePunsAccent
+        }
     }
 }
 
-// MARK: - Daily Sweep Celebration
+private struct GameCardArtwork: View {
+    let gameType: GameType
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(Color.wuzzlerCardText.opacity(0.14))
+                .rotationEffect(.degrees(5))
+
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(Color.wuzzlerSurface.opacity(0.9))
+                .rotationEffect(.degrees(-3))
+                .padding(7)
+
+            switch gameType {
+            case .diagone:
+                DiagoneIconView(size: 54, color: .diagoneAccent)
+            case .rhymeAGrams:
+                RhymeAGramsIconView(size: 54, color: .rhymeAGramsAccent)
+            case .tumblePuns:
+                TumblePunsIconView(size: 54, color: .tumblePunsAccent)
+            }
+        }
+    }
+}
 
 private struct DailySweepCelebration: View {
     let onDismiss: () -> Void
@@ -283,40 +288,31 @@ private struct DailySweepCelebration: View {
         ZStack {
             Color.black.opacity(appeared ? 0.5 : 0)
                 .ignoresSafeArea()
-                .onTapGesture { dismiss() }
+                .onTapGesture(perform: dismiss)
 
             VStack(spacing: 20) {
                 Image(systemName: "trophy.fill")
                     .font(.system(size: 56))
                     .foregroundStyle(.yellow)
-                    .shadow(color: .orange.opacity(0.4), radius: 8)
 
                 Text("Daily Sweep!")
-                    .font(.title.weight(.bold))
+                    .font(.system(.title, design: .rounded, weight: .bold))
 
                 Text("You completed all three puzzles today!")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
 
-                Button {
-                    dismiss()
-                } label: {
-                    Text("Nice!")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 48)
-                        .padding(.vertical, 12)
-                        .background(Capsule().fill(.orange))
-                }
-                .padding(.top, 8)
+                Button("Nice!", action: dismiss)
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 48)
+                    .frame(minHeight: 44)
+                    .background(Color.orange, in: Capsule())
             }
             .padding(32)
-            .background(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(Color(UIColor.systemBackground))
-                    .shadow(color: .black.opacity(0.2), radius: 20)
-            )
+            .background(Color.wuzzlerSurface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .shadow(color: .black.opacity(0.2), radius: 20)
             .padding(.horizontal, 32)
             .scaleEffect(appeared ? 1 : 0.8)
             .opacity(appeared ? 1 : 0)
@@ -330,27 +326,12 @@ private struct DailySweepCelebration: View {
 
     private func dismiss() {
         withAnimation(.easeOut(duration: 0.2)) { appeared = false }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { onDismiss() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25, execute: onDismiss)
     }
 }
 
-// MARK: - Custom Game Icons
-fileprivate struct GameIconView: View {
-    let gameType: GameType
+// MARK: - Reusable Game Artwork
 
-    var body: some View {
-        switch gameType {
-        case .diagone:
-            DiagoneIconView(size: 54, color: gameType.accentColor)
-        case .rhymeAGrams:
-            RhymeAGramsIconView(size: 54, color: gameType.accentColor)
-        case .tumblePuns:
-            TumblePunsIconView(size: 54, color: gameType.accentColor)
-        }
-    }
-}
-
-// Diagone: 3x3 grid of filled rounded squares
 struct DiagoneIconView: View {
     let size: CGFloat
     var color: Color = .diagoneAccent
@@ -373,7 +354,6 @@ struct DiagoneIconView: View {
     }
 }
 
-// RhymeAGrams: filled triangle with rounded corners
 struct RhymeAGramsIconView: View {
     let size: CGFloat
     var color: Color = .rhymeAGramsAccent
@@ -389,11 +369,9 @@ private struct RoundedTriangle: Shape {
     let radius: CGFloat
 
     func path(in rect: CGRect) -> Path {
-        let inset = rect.width * 0.0
-        let top = CGPoint(x: rect.midX, y: inset)
-        let bottomRight = CGPoint(x: rect.maxX - inset, y: rect.maxY - inset)
-        let bottomLeft = CGPoint(x: inset, y: rect.maxY - inset)
-
+        let top = CGPoint(x: rect.midX, y: rect.minY)
+        let bottomRight = CGPoint(x: rect.maxX, y: rect.maxY)
+        let bottomLeft = CGPoint(x: rect.minX, y: rect.maxY)
         var path = Path()
         path.move(to: CGPoint(x: (top.x + bottomLeft.x) / 2, y: (top.y + bottomLeft.y) / 2))
         path.addArc(tangent1End: top, tangent2End: bottomRight, radius: radius)
@@ -404,7 +382,6 @@ private struct RoundedTriangle: Shape {
     }
 }
 
-// TumblePuns: 3x3 grid of filled circles
 struct TumblePunsIconView: View {
     let size: CGFloat
     var color: Color = .tumblePunsAccent

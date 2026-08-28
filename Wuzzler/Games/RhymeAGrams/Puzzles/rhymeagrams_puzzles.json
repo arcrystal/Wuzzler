@@ -1,0 +1,487 @@
+
+{
+    "08/07/2026": {
+        "letters": ["D", "EEE", "EIIII", "LMMMMMT"],
+        "solutions": ["DIME", "LIME", "MIME", "TIME"]
+      },
+    "08/08/2026": {
+        "letters": ["E", "EEE", "IIIIL", "LLLMPRT"],
+        "solutions": ["MILE", "PILE", "RILE", "TILE"]
+      },
+    "08/09/2026": {
+        "letters": ["B", "DEE", "EELRR", "STTUUWW"],
+        "solutions": ["BLUE", "DREW", "STEW", "TRUE"]
+      },
+    "08/10/2026": {
+        "letters": ["I", "III", "KKKKL", "NNNNPRS"],
+        "solutions": ["LINK", "PINK", "RINK", "SINK"]
+      },
+    "08/11/2026": {
+        "letters": ["B", "CHK", "KKKLO", "OOOOOOO"],
+        "solutions": ["BOOK", "COOK", "HOOK", "LOOK"]
+      },
+    "08/12/2026": {
+        "letters": ["B", "EEE", "EFGLP", "RRSWWWW"],
+        "solutions": ["BREW", "FLEW", "GREW", "SPEW"]
+      },
+    "08/13/2026": {
+        "letters": ["A", "AAA", "GGGGG", "NNNNRST"],
+        "solutions": ["GANG", "RANG", "SANG", "TANG"]
+      },
+    "08/14/2026": {
+        "letters": ["G", "GGG", "IIIIK", "NNNNPRS"],
+        "solutions": ["KING", "PING", "RING", "SING"]
+      },
+    "08/15/2026": {
+        "letters": ["C", "CCC", "IIIIK", "KKKKLPS"],
+        "solutions": ["KICK", "LICK", "PICK", "SICK"]
+      },
+    "08/16/2026": {
+        "letters": ["A", "ABE", "EMOOO", "ORRRRRS"],
+        "solutions": ["BORE", "MORE", "ROAR", "SOAR"]
+      },
+    "08/17/2026": {
+        "letters": ["A", "ABE", "EEEEE", "FILRRST"],
+        "solutions": ["ASEA", "BRIE", "FLEE", "TREE"]
+      },
+    "08/18/2026": {
+        "letters": ["A", "AAA", "CDLMM", "MMPPPPV"],
+        "solutions": ["CAMP", "DAMP", "LAMP", "VAMP"]
+      },
+    "08/19/2026": {
+        "letters": ["A", "AAB", "EEEEE", "FMSTTTT"],
+        "solutions": ["BEAT", "FEAT", "MEET", "SEAT"]
+      },
+    "08/20/2026": {
+        "letters": ["A", "ABE", "EEEEE", "FHMTTTT"],
+        "solutions": ["BEET", "FEET", "HEAT", "MEAT"]
+      },
+    "08/21/2026": {
+        "letters": ["A", "AAE", "EEEEF", "LLLLMRV"],
+        "solutions": ["FEEL", "MEAL", "REAL", "VEAL"]
+      },
+    "08/22/2026": {
+        "letters": ["A", "AAA", "BCEEE", "ELKKKKT"],
+        "solutions": ["BAKE", "CAKE", "LAKE", "TAKE"]
+      },
+    "08/23/2026": {
+        "letters": ["A", "BEE", "ELNNN", "NOOOSWZ"],
+        "solutions": ["BONE", "LOAN", "SEWN", "ZONE"]
+      },
+    "08/24/2026": {
+        "letters": ["A", "AAE", "FGLNN", "NNOWWWY"],
+        "solutions": ["FAWN", "GONE", "LAWN", "YAWN"]
+      },
+    "08/25/2026": {
+        "letters": ["A", "AAA", "CEEEH", "IMPRRRR"],
+        "solutions": ["CARE", "HAIR", "MARE", "PEAR"]
+      },
+    "08/26/2026": {
+        "letters": ["D", "HLM", "MMMPP", "PPRUUUU"],
+        "solutions": ["DUMP", "HUMP", "LUMP", "RUMP"]
+      },
+    "08/27/2026": {
+        "letters": ["C", "EEE", "EFHHI", "LOSUVWW"],
+        "solutions": ["CHEW", "FLUE", "SHOE", "VIEW"]
+      },
+    "08/28/2026": {
+        "letters": ["A", "EEE", "EEEEF", "FGKLLNR"],
+        "solutions": ["FLEA", "FREE", "GLEE", "KNEE"]
+      },
+    "08/29/2026": {
+        "letters": ["A", "AAA", "EEEEG", "MMMMNST"],
+        "solutions": ["GAME", "NAME", "SAME", "TAME"]
+      },
+    "08/30/2026": {
+        "letters": ["A", "AAA", "CDPRR", "RRTTTTT"],
+        "solutions": ["CART", "DART", "PART", "TART"]
+      },
+    "08/31/2026": {
+        "letters": ["D", "EEE", "EIIII", "LNNNNNV"],
+        "solutions": ["DINE", "LINE", "NINE", "VINE"]
+      },
+    "09/01/2026": {
+        "letters": ["A", "AEE", "EGIII", "LNNNNRV"],
+        "solutions": ["GAIN", "LANE", "REIN", "VEIN"]
+      },
+    "09/02/2026": {
+        "letters": ["B", "CEI", "LOOOO", "STTTTUU"],
+        "solutions": ["BOOT", "CUTE", "LOOT", "SUIT"]
+      },
+    "09/03/2026": {
+        "letters": ["A", "AAA", "CCCCH", "KKKKPRS"],
+        "solutions": ["HACK", "PACK", "RACK", "SACK"]
+      },
+    "09/04/2026": {
+        "letters": ["A", "AAA", "MPPPP", "RSSSSTZ"],
+        "solutions": ["MAPS", "RAPS", "TAPS", "ZAPS"]
+      },
+    "09/05/2026": {
+        "letters": ["B", "LMO", "OOOSS", "SSSSSST"],
+        "solutions": ["BOSS", "LOSS", "MOSS", "TOSS"]
+      },
+    "09/06/2026": {
+        "letters": ["B", "EEE", "EHIII", "IKKKKLP"],
+        "solutions": ["BIKE", "HIKE", "LIKE", "PIKE"]
+      },
+    "09/07/2026": {
+        "letters": ["A", "BDE", "FOOOO", "ORRRRUW"],
+        "solutions": ["BOAR", "DOOR", "FOUR", "WORE"]
+      },
+    "09/08/2026": {
+        "letters": ["B", "CEE", "EELNN", "NNTTTTW"],
+        "solutions": ["BENT", "CENT", "LENT", "WENT"]
+      },
+    "09/09/2026": {
+        "letters": ["D", "DDD", "DEEEE", "IIIRTWY"],
+        "solutions": ["DYED", "RIDE", "TIED", "WIDE"]
+      },
+    "09/10/2026": {
+        "letters": ["D", "DDD", "EEFMO", "OOORSUU"],
+        "solutions": ["FOOD", "MOOD", "RUDE", "SUED"]
+      },
+    "09/11/2026": {
+        "letters": ["B", "LOO", "OOPRT", "TTTUUUU"],
+        "solutions": ["BOUT", "LOUT", "POUT", "ROUT"]
+      },
+    "09/12/2026": {
+        "letters": ["A", "AAA", "BHHHH", "LRSSSSS"],
+        "solutions": ["BASH", "LASH", "RASH", "SASH"]
+      },
+    "09/13/2026": {
+        "letters": ["A", "AAA", "BDEEE", "FIRRRRT"],
+        "solutions": ["BEAR", "DARE", "FAIR", "TEAR"]
+      },
+    "09/14/2026": {
+        "letters": ["B", "FLL", "LLLLL", "OOPUUUW"],
+        "solutions": ["BULL", "FULL", "PULL", "WOOL"]
+      },
+    "09/15/2026": {
+        "letters": ["G", "III", "IKKMN", "RSTTTTT"],
+        "solutions": ["GRIT", "KNIT", "MITT", "SKIT"]
+      },
+    "09/16/2026": {
+        "letters": ["A", "CEG", "HILLL", "LRRRRUU"],
+        "solutions": ["CURL", "EARL", "GIRL", "HURL"]
+      },
+    "09/17/2026": {
+        "letters": ["B", "EEE", "EHIII", "IKKKKLP"],
+        "solutions": ["BIKE", "HIKE", "LIKE", "PIKE"]
+      },
+    "09/18/2026": {
+        "letters": ["B", "EEE", "EHIII", "IKKKKLP"],
+        "solutions": ["BIKE", "HIKE", "LIKE", "PIKE"]
+      },
+    "09/19/2026": {
+        "letters": ["E", "EEE", "FIIIL", "RRRRTWY"],
+        "solutions": ["FIRE", "LYRE", "TIRE", "WIRE"]
+      },
+    "09/20/2026": {
+        "letters": ["D", "EEF", "LLLLO", "OOOPRUU"],
+        "solutions": ["DUEL", "FOOL", "POOL", "RULE"]
+      },
+    "09/21/2026": {
+        "letters": ["C", "CCC", "DEEEE", "IIIIMRV"],
+        "solutions": ["DICE", "MICE", "RICE", "VICE"]
+      },
+    "09/22/2026": {
+        "letters": ["C", "DDD", "DEGHI", "ORRRRUW"],
+        "solutions": ["CURD", "GIRD", "HERD", "WORD"]
+      },
+    "09/23/2026": {
+        "letters": ["A", "EEJ", "KKKKL", "OOOOPSY"],
+        "solutions": ["JOKE", "POKE", "SOAK", "YOLK"]
+      },
+    "09/24/2026": {
+        "letters": ["A", "AAE", "HLPRS", "TTTYYYY"],
+        "solutions": ["PLAY", "STAY", "THEY", "TRAY"]
+      },
+    "09/25/2026": {
+        "letters": ["E", "EEE", "FHLOR", "SSSSUUU"],
+        "solutions": ["HUES", "FUSE", "LOSE", "RUSE"]
+      },
+    "09/26/2026": {
+        "letters": ["L", "MNN", "NNNOO", "OOOOOOS"],
+        "solutions": ["LOON", "MOON", "NOON", "SOON"]
+      },
+    "09/27/2026": {
+        "letters": ["A", "AAA", "CFLLL", "PPPPRST"],
+        "solutions": ["CLAP", "FLAP", "SLAP", "TRAP"]
+      },
+    "09/28/2026": {
+        "letters": ["B", "EEI", "LPRRR", "RRSTUUW"],
+        "solutions": ["BLUR", "PURR", "STIR", "WERE"]
+      },
+    "09/29/2026": {
+        "letters": ["A", "AAA", "BBBBC", "FGLRRST"],
+        "solutions": ["CRAB", "FLAB", "GRAB", "STAB"]
+      },
+    "09/30/2026": {
+        "letters": ["C", "GII", "ILMSS", "SSTTTTY"],
+        "solutions": ["CYST", "GIST", "LIST", "MIST"]
+      },
+    "10/01/2026": {
+        "letters": ["A", "AAA", "BCEEF", "KOOWYYY"],
+        "solutions": ["AWAY", "CAFE", "OBEY", "OKAY"]
+      },
+    "10/02/2026": {
+        "letters": ["A", "AAA", "EEGHI", "IJKLLLL"],
+        "solutions": ["GALE", "HAIL", "JAIL", "KALE"]
+      },
+    "10/03/2026": {
+        "letters": ["A", "AAA", "CGHHH", "HHMSSSS"],
+        "solutions": ["CASH", "GASH", "HASH", "MASH"]
+      },
+    "10/04/2026": {
+        "letters": ["A", "AAA", "EEFGI", "ILTTTTW"],
+        "solutions": ["FATE", "GAIT", "LATE", "WAIT"]
+      },
+    "10/05/2026": {
+        "letters": ["B", "CFF", "FFFFF", "FHPUUUU"],
+        "solutions": ["BUFF", "CUFF", "HUFF", "PUFF"]
+      },
+    "10/06/2026": {
+        "letters": ["A", "AAA", "CDDDD", "HLRRRRY"],
+        "solutions": ["CARD", "HARD", "LARD", "YARD"]
+      },
+    "10/07/2026": {
+        "letters": ["F", "III", "ILPQR", "STTTTUW"],
+        "solutions": ["FLIT", "QUIT", "SPIT", "WRIT"]
+      },
+    "10/08/2026": {
+        "letters": ["E", "EEE", "EMNOO", "SSSUWWZ"],
+        "solutions": ["EWES", "MUSE", "NEWS", "OOZE"]
+      },
+    "10/09/2026": {
+        "letters": ["A", "ACE", "EGNOO", "OOTTTTV"],
+        "solutions": ["COAT", "GOAT", "NOTE", "VOTE"]
+      },
+    "10/10/2026": {
+        "letters": ["B", "DEE", "EHOOO", "OSSSWWZ"],
+        "solutions": ["BOWS", "DOZE", "HOSE", "WOES"]
+      },
+    "10/11/2026": {
+        "letters": ["D", "FGL", "LMMMM", "OPRRUUU"],
+        "solutions": ["DRUM", "FROM", "GLUM", "PLUM"]
+      },
+    "10/12/2026": {
+        "letters": ["F", "III", "INNNN", "NSSSSTW"],
+        "solutions": ["FINS", "INNS", "TINS", "WINS"]
+      },
+    "10/13/2026": {
+        "letters": ["A", "EEE", "EEIKK", "SSSSSSY"],
+        "solutions": ["EASE", "KEYS", "SEES", "SKIS"]
+      },
+    "10/14/2026": {
+        "letters": ["D", "FIN", "NOOOT", "TTTUUUU"],
+        "solutions": ["INTO", "TOFU", "TUTU", "UNDO"]
+      },
+    "10/15/2026": {
+        "letters": ["C", "DGH", "IIIIP", "PPPQRRU"],
+        "solutions": ["CHIP", "DRIP", "GRIP", "QUIP"]
+      },
+    "10/16/2026": {
+        "letters": ["A", "AAA", "CEEEE", "HHKKKMW"],
+        "solutions": ["ACHE", "HAKE", "MAKE", "WAKE"]
+      },
+    "10/17/2026": {
+        "letters": ["B", "EEH", "JNOOR", "TTTTUUW"],
+        "solutions": ["BRUT", "HOOT", "JUTE", "NEWT"]
+      },
+    "10/18/2026": {
+        "letters": ["A", "DDD", "DDNOO", "OPSSSSW"],
+        "solutions": ["NODS", "ODDS", "PODS", "WADS"]
+      },
+    "10/19/2026": {
+        "letters": ["A", "EEE", "EEEHI", "JPRRRRY"],
+        "solutions": ["HERE", "JEER", "PIER", "YEAR"]
+      },
+    "10/20/2026": {
+        "letters": ["D", "EIJ", "KKKKL", "ORRRRUW"],
+        "solutions": ["DIRK", "JERK", "LURK", "WORK"]
+      },
+    "10/21/2026": {
+        "letters": ["A", "AAA", "EEIIM", "NNNNPSV"],
+        "solutions": ["MAIN", "PANE", "SANE", "VAIN"]
+      },
+    "10/22/2026": {
+        "letters": ["D", "DDD", "FGHLL", "LLOOOOT"],
+        "solutions": ["FOLD", "GOLD", "HOLD", "TOLD"]
+      },
+    "10/23/2026": {
+        "letters": ["A", "BEE", "EFKNN", "NNRRRRU"],
+        "solutions": ["BURN", "EARN", "FERN", "KERN"]
+      },
+    "10/24/2026": {
+        "letters": ["B", "CHL", "OOOOP", "PRRWWWW"],
+        "solutions": ["BROW", "CHOW", "PLOW", "PROW"]
+      },
+    "10/25/2026": {
+        "letters": ["A", "AAA", "CDGHN", "RRTWWWW"],
+        "solutions": ["CRAW", "DRAW", "GNAW", "THAW"]
+      },
+    "10/26/2026": {
+        "letters": ["C", "DDD", "DDEEE", "EFLUUUW"],
+        "solutions": ["CUED", "DUDE", "FEUD", "LEWD"]
+      },
+    "10/27/2026": {
+        "letters": ["D", "DDD", "EEEEE", "HIIITVY"],
+        "solutions": ["EYED", "HIDE", "TIDE", "VIED"]
+      },
+    "10/28/2026": {
+        "letters": ["A", "AAE", "EEHII", "LLLLNPV"],
+        "solutions": ["HALE", "NAIL", "PALE", "VEIL"]
+      },
+    "10/29/2026": {
+        "letters": ["A", "AAA", "BDEEE", "IRSTTTT"],
+        "solutions": ["BAIT", "DATE", "RATE", "SATE"]
+      },
+    "10/30/2026": {
+        "letters": ["B", "EEE", "EHIII", "IKKKKLP"],
+        "solutions": ["BIKE", "HIKE", "LIKE", "PIKE"]
+      },
+    "10/31/2026": {
+        "letters": ["A", "AAE", "EEILM", "SSSWYYZ"],
+        "solutions": ["LEIS", "MAZE", "WAYS", "YEAS"]
+      },
+    "11/01/2026": {
+        "letters": ["A", "AAA", "BBCJL", "MMMMPRS"],
+        "solutions": ["JAMB", "LAMB", "PRAM", "SCAM"]
+      },
+    "11/02/2026": {
+        "letters": ["A", "AAA", "CCCEE", "EELMSSV"],
+        "solutions": ["CASE", "LACE", "MACE", "VASE"]
+      },
+    "11/03/2026": {
+        "letters": ["H", "III", "IJKLL", "LLTTTTW"],
+        "solutions": ["HILT", "JILT", "KILT", "WILT"]
+      },
+    "11/04/2026": {
+        "letters": ["A", "ABH", "MPTTT", "TTTUUUW"],
+        "solutions": ["ABUT", "MUTT", "PUTT", "WHAT"]
+      },
+    "11/05/2026": {
+        "letters": ["A", "ABE", "EHKLN", "OOOSUWW"],
+        "solutions": ["BEAU", "KNOW", "SLOE", "WHOA"]
+      },
+    "11/06/2026": {
+        "letters": ["A", "FGG", "HLOOO", "RSUWWWX"],
+        "solutions": ["FAUX", "GLOW", "GROW", "SHOW"]
+      },
+    "11/07/2026": {
+        "letters": ["A", "AAA", "DEEEH", "JRSYZZZ"],
+        "solutions": ["DAZE", "HAZE", "JAYS", "RAZE"]
+      },
+    "11/08/2026": {
+        "letters": ["H", "III", "IKPRS", "SSTTTTZ"],
+        "solutions": ["HITS", "KITS", "PITS", "RITZ"]
+      },
+    "11/09/2026": {
+        "letters": ["A", "AAA", "BDGGG", "GHNNNNP"],
+        "solutions": ["BANG", "DANG", "HANG", "PANG"]
+      },
+    "11/10/2026": {
+        "letters": ["C", "DJL", "LLLMO", "OOOTTTT"],
+        "solutions": ["COLT", "DOLT", "JOLT", "MOLT"]
+      },
+    "11/11/2026": {
+        "letters": ["E", "ELM", "MOOOO", "TTTTTUU"],
+        "solutions": ["LUTE", "MOOT", "MUTE", "TOOT"]
+      },
+    "11/12/2026": {
+        "letters": ["A", "ADE", "EEEEE", "NRRRRSV"],
+        "solutions": ["DEER", "NEAR", "SEAR", "VEER"]
+      },
+    "11/13/2026": {
+        "letters": ["E", "EEE", "EEEEH", "KLLLLST"],
+        "solutions": ["HEEL", "KEEL", "SEEL", "TEEL"]
+      },
+    "11/14/2026": {
+        "letters": ["A", "CGG", "HHHHI", "IINPRSY"],
+        "solutions": ["CHAI", "HIGH", "NIGH", "SPRY"]
+      },
+    "11/15/2026": {
+        "letters": ["A", "AAA", "BGHKK", "KKLLWWW"],
+        "solutions": ["BALK", "GAWK", "HAWK", "WALK"]
+      },
+    "11/16/2026": {
+        "letters": ["F", "HJL", "LLLOO", "OOUWWWY"],
+        "solutions": ["FOUL", "HOWL", "JOWL", "YOWL"]
+      },
+    "11/17/2026": {
+        "letters": ["B", "BCD", "EHMMM", "MNOSUUU"],
+        "solutions": ["CHUM", "DUMB", "NUMB", "SOME"]
+      },
+    "11/18/2026": {
+        "letters": ["A", "AAA", "BGLLL", "LLLMPUW"],
+        "solutions": ["BAWL", "GALL", "PALL", "MAUL"]
+      },
+    "11/19/2026": {
+        "letters": ["A", "AAA", "DDDDE", "EIIILPR"],
+        "solutions": ["AIDE", "LADE", "PAID", "RAID"]
+      },
+    "11/20/2026": {
+        "letters": ["A", "DDD", "DEEEL", "OOOORTW"],
+        "solutions": ["LOAD", "OWED", "RODE", "TOED"]
+      },
+    "11/21/2026": {
+        "letters": ["C", "EEE", "FKKKK", "LOOOOWY"],
+        "solutions": ["COKE", "FOLK", "WOKE", "YOKE"]
+      },
+    "11/22/2026": {
+        "letters": ["B", "EEE", "EHIII", "IKKKKLP"],
+        "solutions": ["BIKE", "HIKE", "LIKE", "PIKE"]
+      },
+    "11/23/2026": {
+        "letters": ["B", "EEE", "EJSSS", "STTTTVZ"],
+        "solutions": ["BEST", "JEST", "VEST", "ZEST"]
+      },
+    "11/24/2026": {
+        "letters": ["A", "DDE", "EEFLN", "RRWYYYY"],
+        "solutions": ["AWRY", "DEFY", "DENY", "RELY"]
+      },
+    "11/25/2026": {
+        "letters": ["A", "BFL", "LLLLO", "OOORSUW"],
+        "solutions": ["BOWL", "FOAL", "SOUL", "ROLL"]
+      },
+    "11/26/2026": {
+        "letters": ["C", "CCE", "EEEHK", "KNPRSTT"],
+        "solutions": ["NECK", "SPEC", "TECH", "TREK"]
+      },
+    "11/27/2026": {
+        "letters": ["D", "GNN", "NNNOO", "OOTUWWW"],
+        "solutions": ["DOWN", "GOWN", "NOUN", "TOWN"]
+      },
+    "11/28/2026": {
+        "letters": ["A", "ABE", "EEEEE", "HPPPPRW"],
+        "solutions": ["BEEP", "HEEP", "REAP", "WEAP"]
+      },
+    "11/29/2026": {
+        "letters": ["C", "EHH", "HOOOO", "OPPPSUW"],
+        "solutions": ["COUP", "PHEW", "POOH", "SHOO"]
+      },
+    "11/30/2026": {
+        "letters": ["A", "AAA", "HLLLL", "LLLMTUW"],
+        "solutions": ["HAUL", "MALL", "TALL", "WALL"]
+      },
+    "12/01/2026": {
+        "letters": ["A", "AAA", "BCKKK", "KMSSSST"],
+        "solutions": ["BASK", "CASK", "MASK", "TASK"]
+      },
+    "12/02/2026": {
+        "letters": ["D", "EGL", "OOOOO", "PPPPSUU"],
+        "solutions": ["DUPE", "GOOP", "LOOP", "SOUP"]
+      },
+    "12/03/2026": {
+        "letters": ["A", "ABC", "DDDDE", "EEEEELW"],
+        "solutions": ["BEAD", "CEDE", "LEAD", "WEED"]
+      },
+    "12/04/2026": {
+        "letters": ["B", "EFT", "ELLLL", "EELLLLW"],
+        "solutions": ["BELL", "FELL", "TELL", "WELL"]
+      },
+    "12/05/2026": {
+        "letters": ["G", "AFN", "SAAEE", "EEAMMMM"],
+        "solutions": ["GAME", "FAME", "NAME", "SAME"]
+      }
+}

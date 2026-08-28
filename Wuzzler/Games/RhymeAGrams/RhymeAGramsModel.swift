@@ -114,6 +114,11 @@ enum RhymeAGramsPuzzleLibrary {
     private static var cacheLoaded = false
 
     static func loadPuzzleMap(resource: String = "rhymeagrams_puzzles", subdirectory: String? = nil) -> [String: PuzzleData]? {
+        if let remote = PuzzleContentService.shared.rhymeAGramsMap(), !remote.isEmpty {
+            cache = remote
+            cacheLoaded = true
+            return remote
+        }
         if cacheLoaded { return cache }
         let bundle = Bundle.main
 
@@ -144,13 +149,7 @@ enum RhymeAGramsPuzzleLibrary {
     }
 
     static func loadPuzzle(for date: Date) -> RhymeAGramsPuzzle {
-        // Format date as MM/DD/YYYY
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MM/dd/yyyy"
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone(secondsFromGMT: 0)
-        let dateKey = formatter.string(from: date)
+        let dateKey = PuzzleDay.puzzleKey(for: date)
 
         // Load puzzle map
         if let puzzleMap = loadPuzzleMap(),

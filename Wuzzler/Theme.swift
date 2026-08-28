@@ -35,6 +35,16 @@ enum Haptics {
             UIImpactFeedbackGenerator(style: style).impactOccurred()
         }
     }
+
+    /// Keep feedback generation out of the gesture's visual update path. Even a
+    /// prepared generator can occasionally need to reconnect to the Taptic Engine,
+    /// so the state change that prompted the feedback should be committed first.
+    static func impactAfterUIUpdate(_ style: UIImpactFeedbackGenerator.FeedbackStyle = .soft) {
+        guard UserDefaults.standard.hapticsEnabled else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.01) {
+            impact(style)
+        }
+    }
 }
 
 // MARK: - Game Accent Environment Key
@@ -55,6 +65,65 @@ extension EnvironmentValues {
 /// themes via a configuration file in the future. Colours are exposed as
 /// static computed properties on `Color` for convenience.
 extension Color {
+    // MARK: - App Surfaces
+
+    /// Warm editorial canvas used by the main Wuzzler shell.
+    static var wuzzlerCanvas: Color {
+        Color(UIColor { trait in
+            trait.userInterfaceStyle == .dark
+                ? UIColor(red: 0.09, green: 0.09, blue: 0.10, alpha: 1.0)
+                : UIColor(red: 0.96, green: 0.95, blue: 0.92, alpha: 1.0)
+        })
+    }
+
+    static var wuzzlerSurface: Color {
+        Color(UIColor { trait in
+            trait.userInterfaceStyle == .dark
+                ? UIColor(red: 0.15, green: 0.15, blue: 0.17, alpha: 1.0)
+                : UIColor(red: 1.0, green: 1.0, blue: 0.99, alpha: 1.0)
+        })
+    }
+
+    static var wuzzlerTabBarSolid: Color {
+        Color(UIColor { trait in
+            trait.userInterfaceStyle == .dark
+                ? UIColor(red: 0.18, green: 0.19, blue: 0.22, alpha: 1.0)
+                : UIColor(red: 0.92, green: 0.93, blue: 0.95, alpha: 1.0)
+        })
+    }
+
+    static var diagoneCard: Color {
+        Color(UIColor { trait in
+            trait.userInterfaceStyle == .dark
+                ? UIColor(red: 0.15, green: 0.31, blue: 0.50, alpha: 1.0)
+                : UIColor(red: 0.56, green: 0.72, blue: 0.95, alpha: 1.0)
+        })
+    }
+
+    static var rhymeAGramsCard: Color {
+        Color(UIColor { trait in
+            trait.userInterfaceStyle == .dark
+                ? UIColor(red: 0.15, green: 0.35, blue: 0.24, alpha: 1.0)
+                : UIColor(red: 0.66, green: 0.86, blue: 0.72, alpha: 1.0)
+        })
+    }
+
+    static var tumblePunsCard: Color {
+        Color(UIColor { trait in
+            trait.userInterfaceStyle == .dark
+                ? UIColor(red: 0.43, green: 0.19, blue: 0.18, alpha: 1.0)
+                : UIColor(red: 0.95, green: 0.67, blue: 0.64, alpha: 1.0)
+        })
+    }
+
+    static var wuzzlerCardText: Color {
+        Color(UIColor { trait in
+            trait.userInterfaceStyle == .dark
+                ? UIColor(red: 0.98, green: 0.98, blue: 0.98, alpha: 1.0)
+                : UIColor(red: 0.08, green: 0.08, blue: 0.09, alpha: 1.0)
+        })
+    }
+
     /// Background colour for individual board cells. A subtle off‑white in light
     /// mode and a dark grey in dark mode to retain appropriate contrast.
     static var boardCell: Color {

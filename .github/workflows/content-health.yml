@@ -1,0 +1,14 @@
+name: Published content health
+
+on:
+  schedule:
+    - cron: '17 12 * * *'
+  workflow_dispatch:
+
+jobs:
+  validate-endpoint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate published manifest
+        run: Scripts/check_content_endpoint.py --minimum-future-days 30

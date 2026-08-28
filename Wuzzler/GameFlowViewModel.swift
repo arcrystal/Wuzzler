@@ -27,6 +27,7 @@ class GameFlowViewModel: ObservableObject {
     let storageKeyPrefix: String
     let gameType: GameType
     let puzzleDate: Date
+    let countsTowardStats: Bool
 
     /// Exact time from wave trigger to last bounce settling.
     /// Subclasses should compute this from their animation parameters.
@@ -36,25 +37,15 @@ class GameFlowViewModel: ObservableObject {
     /// Defaults to winAnimationDuration; Diagone overrides with its own timing.
     open var hapticDelay: TimeInterval { winAnimationDuration }
 
-    /// Whether this is an archive (non-today) puzzle.
-    var isArchivePuzzle: Bool {
-        !Calendar.current.isDateInToday(puzzleDate)
-    }
-
-    private static let dateKeyFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.calendar = Calendar(identifier: .gregorian)
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = TimeZone(secondsFromGMT: 0)
-        f.dateFormat = "yyyy-MM-dd"
-        return f
-    }()
-
     var puzzleDateString: String {
-        Self.dateKeyFormatter.string(from: puzzleDate)
+        PuzzleDay.storageKey(for: puzzleDate)
     }
 
-    var storageKey: String { "\(storageKeyPrefix)_state_\(puzzleDateString)" }
+    private var persistencePrefix: String {
+        countsTowardStats ? storageKeyPrefix : "\(storageKeyPrefix)_practice"
+    }
+
+    var storageKey: String { "\(persistencePrefix)_state_\(puzzleDateString)" }
 
     // MARK: - DailyMeta Persistence
 
@@ -64,10 +55,11 @@ class GameFlowViewModel: ObservableObject {
         var elapsedTime: TimeInterval
         var finishTime: TimeInterval
         var lastUpdated: Date
+        var isPractice: Bool?
     }
 
     var metaKey: String {
-        "\(storageKeyPrefix)_meta_\(puzzleDateString)"
+        "\(persistencePrefix)_meta_\(puzzleDateString)"
     }
 
     func loadDailyMeta() -> DailyMeta? {
@@ -84,6 +76,7 @@ class GameFlowViewModel: ObservableObject {
         if let f = finished { current.finished = f }
         if let e = elapsedTime { current.elapsedTime = e }
         if let ft = finishTime { current.finishTime = ft }
+        current.isPractice = !countsTowardStats
         current.lastUpdated = Date()
         if let data = try? JSONEncoder().encode(current) {
             UserDefaults.standard.set(data, forKey: metaKey)
@@ -92,15 +85,16 @@ class GameFlowViewModel: ObservableObject {
 
     // MARK: - Init
 
-    init(storageKeyPrefix: String, gameType: GameType, puzzleDate: Date = Date()) {
+    init(storageKeyPrefix: String, gameType: GameType, puzzleDate: Date = Date(), countsTowardStats: Bool? = nil) {
         self.storageKeyPrefix = storageKeyPrefix
         self.gameType = gameType
         self.puzzleDate = puzzleDate
+        self.countsTowardStats = countsTowardStats ?? PuzzleDay.isToday(puzzleDate)
 
         // Migration: if puzzleDate is today and legacy key has data but new key doesn't, migrate
-        if Calendar.current.isDateInToday(puzzleDate) {
+        if self.countsTowardStats && PuzzleDay.isToday(puzzleDate) {
             let legacyKey = "\(storageKeyPrefix)_state"
-            let newKey = "\(storageKeyPrefix)_state_\(Self.dateKeyFormatter.string(from: puzzleDate))"
+            let newKey = "\(storageKeyPrefix)_state_\(PuzzleDay.storageKey(for: puzzleDate))"
             if UserDefaults.standard.data(forKey: legacyKey) != nil &&
                UserDefaults.standard.data(forKey: newKey) == nil {
                 let data = UserDefaults.standard.data(forKey: legacyKey)

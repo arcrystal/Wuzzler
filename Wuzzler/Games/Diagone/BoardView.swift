@@ -22,19 +22,31 @@ struct BoardView: View {
     var body: some View {
         GeometryReader { geo in
             let side: CGFloat = min(geo.size.width, geo.size.height)
-            let gap: CGFloat = side * 0.005
+            let gap: CGFloat = Self.gridGap(for: side)
             let cellSize: CGFloat = (side - gap * 5) / 6.0
 
             ZStack {
                 // Grid + letters layer
-                GridLayer(cellSize: cellSize, gap: gap)
+                GridLayer(cellSize: cellSize, gap: gap, highlightRow: highlightRow)
                     .frame(width: side, height: side)
                     .background(boardFrameReporter)
                     .modifier(Shake(animatableData: CGFloat(viewModel.shakeTrigger)))
 
-                // Targets overlay layer (tap + drop hit areas)
-                TargetsOverlayLayer(cellSize: cellSize)
+                // Targets overlay layer (drag hit areas for placed chips)
+                TargetsOverlayLayer(cellSize: cellSize, gap: gap)
             }
+            .frame(width: side, height: side)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text("Diagone board"))
+            .accessibilityIdentifier("diagone-board")
+            .contentShape(Rectangle())
+            .highPriorityGesture(
+                SpatialTapGesture()
+                    .onEnded { value in
+                        guard let cell = Self.cell(at: value.location, cellSize: cellSize, gap: gap) else { return }
+                        viewModel.handleTap(at: cell)
+                    }
+            )
             .background(
                 GeometryReader { proxy in
                     Color.clear.preference(key: BoardFrameKey.self,
@@ -57,6 +69,24 @@ struct BoardView: View {
         .aspectRatio(1, contentMode: .fit)
     }
 
+    static func gridGap(for side: CGFloat) -> CGFloat {
+        max(2, min(4, side * 0.008))
+    }
+
+    static func cell(at location: CGPoint, cellSize: CGFloat, gap: CGFloat) -> Cell? {
+        guard location.x >= 0, location.y >= 0 else { return nil }
+        let pitch = cellSize + gap
+        let col = Int(location.x / pitch)
+        let row = Int(location.y / pitch)
+        guard (0..<6).contains(row), (0..<6).contains(col) else { return nil }
+
+        let xInCell = location.x - CGFloat(col) * pitch
+        let yInCell = location.y - CGFloat(row) * pitch
+        guard xInCell <= cellSize, yInCell <= cellSize else { return nil }
+
+        return Cell(row: row, col: col)
+    }
+
     private var boardFrameReporter: some View {
         GeometryReader { p in
             Color.clear
@@ -73,16 +103,18 @@ fileprivate struct GridLayer: View {
     @Environment(\.gameAccent) private var gameAccent
     let cellSize: CGFloat
     let gap: CGFloat
+    let highlightRow: Int?
     
     @ViewBuilder
     private func makeCell(isMain: Bool,
                           isHover: Bool,
+                          isHighlighted: Bool,
                           letter: String,
                           cellSize: CGFloat,
                           delay: Double) -> some View {
         let cornerRadius = cellSize * 0.12
         let baseRect = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-            .fill(isMain ? gameAccent : Color.boardCell)
+            .fill(isMain ? gameAccent : (isHighlighted ? gameAccent.opacity(0.18) : Color.boardCell))
         let stroked = baseRect
             .overlay(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous).stroke(Color.gridLine, lineWidth: 1))
         let withHover = stroked
@@ -98,8 +130,10 @@ fileprivate struct GridLayer: View {
                 Group {
                     if !letter.isEmpty {
                         Text(letter)
-                            .font(.system(size: cellSize * 0.5, weight: .bold))
+                            .font(.system(size: cellSize * 0.5, weight: .bold, design: .rounded))
                             .foregroundStyle(Color.letter)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.55)
                     }
                 }
             )
@@ -142,6 +176,7 @@ fileprivate struct GridLayer: View {
                         let waveStep = r + c
                         let isMain = mainCells.contains(id)
                         let isHover = hoverCells.contains(id)
+                        let isHighlighted = highlightRow == r
                         let letter = board[r][c]
 
                         // NEW: baseline + per-step
@@ -151,6 +186,7 @@ fileprivate struct GridLayer: View {
 
                         makeCell(isMain: isMain,
                                  isHover: isHover,
+                                 isHighlighted: isHighlighted,
                                  letter: letter,
                                  cellSize: cellSize,
                                  delay: delay)
@@ -164,50 +200,55 @@ fileprivate struct GridLayer: View {
 fileprivate struct TargetsOverlayLayer: View {
     @EnvironmentObject private var viewModel: GameViewModel
     let cellSize: CGFloat
+    let gap: CGFloat
     var body: some View {
         ZStack {
             ForEach(viewModel.engine.state.targets.sorted(by: { $0.length > $1.length }), id: \.id) { t in
-                DropTargetOverlay(target: t, cellSize: cellSize)
+                DropTargetOverlay(target: t, cellSize: cellSize, gap: gap)
                     .environmentObject(viewModel)
-                    .allowsHitTesting(true)
             }
         }
-        .allowsHitTesting(true)
     }
 }
 
-/// A view representing an invisible drop area over a single diagonal. Handles
-/// taps to remove placed pieces and forwards drop events to the view model via
-/// a custom drop delegate. The overlay’s size and position are derived from
-/// the target’s starting cell and its length.
+/// A view representing an invisible drag area over an occupied diagonal. Taps are
+/// resolved at the board level so empty target overlays never swallow them.
 fileprivate struct DropTargetOverlay: View {
     let target: GameTarget
     let cellSize: CGFloat
+    let gap: CGFloat
     @EnvironmentObject var viewModel: GameViewModel
     @State private var isDragging = false
+
+    private var isOccupied: Bool {
+        viewModel.engine.state.targets.first(where: { $0.id == target.id })?.pieceId != nil
+    }
 
     var body: some View {
         // Calculate bounding box for the diagonal. All diagonals run from top‑left
         // to bottom‑right so width and height are equal to the number of cells.
         let start = target.cells.first!
         let length = CGFloat(target.length)
-        let size = cellSize * length
+        let pitch = cellSize + gap
+        let size = cellSize * length + gap * max(length - 1, 0)
         // Position the overlay so that its top‑left corner aligns with the
         // starting cell of the diagonal. `position` uses the centre point so we
         // add half the size to both coordinates.
-        let centerX = cellSize * (CGFloat(start.col) + length / 2.0)
-        let centerY = cellSize * (CGFloat(start.row) + length / 2.0)
+        let centerX = pitch * CGFloat(start.col) + size / 2.0
+        let centerY = pitch * CGFloat(start.row) + size / 2.0
         return Rectangle()
             .fill(Color.clear)
             .frame(width: size, height: size)
             .position(x: centerX, y: centerY)
             .contentShape({ () -> Path in
                 let cellSize = self.cellSize
+                let pitch = self.cellSize + self.gap
+                let start = self.target.cells.first!
                 var path = Path()
                 for cell in target.cells {
                     let rect = CGRect(
-                        x: CGFloat(cell.col) * cellSize,
-                        y: CGFloat(cell.row) * cellSize,
+                        x: CGFloat(cell.col - start.col) * pitch,
+                        y: CGFloat(cell.row - start.row) * pitch,
                         width: cellSize,
                         height: cellSize
                     ).insetBy(dx: cellSize * 0.12, dy: cellSize * 0.12)
@@ -217,30 +258,24 @@ fileprivate struct DropTargetOverlay: View {
             }())
             .zIndex(10)
             .highPriorityGesture(
-                DragGesture(minimumDistance: 0, coordinateSpace: .global)
+                DragGesture(minimumDistance: 10, coordinateSpace: .global)
                     .onChanged { value in
                         if isDragging {
                             viewModel.updateDrag(globalLocation: value.location)
                             return
                         }
-                        guard target.pieceId != nil else { return }
-                        let distance = sqrt(pow(value.translation.width, 2) + pow(value.translation.height, 2))
-                        if distance > 10 {
-                            isDragging = true
-                            viewModel.beginDraggingFromBoard(targetId: target.id, fingerGlobal: value.location)
-                            viewModel.updateDrag(globalLocation: value.location)
-                        }
+                        guard isOccupied else { return }
+                        isDragging = true
+                        viewModel.beginDraggingFromBoard(targetId: target.id, fingerGlobal: value.location)
+                        viewModel.updateDrag(globalLocation: value.location)
                     }
                     .onEnded { _ in
                         if isDragging {
                             viewModel.finishDrag()
                             isDragging = false
-                        } else if target.pieceId != nil {
-                            viewModel.handleTap(on: target.id)
                         }
                     }
             )
+            .allowsHitTesting(isOccupied || isDragging)
     }
 }
-
-

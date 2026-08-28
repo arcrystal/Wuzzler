@@ -8,9 +8,20 @@ import SwiftUI
 struct WuzzlerApp: App {
     @AppStorage("appearance_mode") private var appearanceMode: AppearanceMode = .system
 
+    init() {
+        if SecurityPolicy.shouldResetUITestState {
+            let prefixes = ["diagone", "rhymeagrams", "tumblepuns"]
+            for key in UserDefaults.standard.dictionaryRepresentation().keys {
+                if prefixes.contains(where: key.hasPrefix) || key == "last_daily_sweep_celebrated" {
+                    UserDefaults.standard.removeObject(forKey: key)
+                }
+            }
+        }
+    }
+
     var body: some Scene {
         WindowGroup {
-            AppCoordinatorView()
+            RootCoordinatorView()
                 .preferredColorScheme(appearanceMode.colorScheme)
         }
     }

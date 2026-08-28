@@ -16,10 +16,10 @@ final class RhymeAGramsViewModel: GameFlowViewModel {
         0.98 + 0.50
     }
 
-    init(puzzleDate: Date = Date()) {
+    init(puzzleDate: Date = Date(), countsTowardStats: Bool? = nil) {
         let puzzle = RhymeAGramsPuzzleLibrary.loadPuzzle(for: puzzleDate)
         self.engine = RhymeAGramsEngine(puzzle: puzzle)
-        super.init(storageKeyPrefix: "rhymeagrams", gameType: .rhymeAGrams, puzzleDate: puzzleDate)
+        super.init(storageKeyPrefix: "rhymeagrams", gameType: .rhymeAGrams, puzzleDate: puzzleDate, countsTowardStats: countsTowardStats)
 
         // Restore game state if meta indicates we started this puzzle
         if started, let data = loadSavedState(),

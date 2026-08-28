@@ -41,6 +41,7 @@ struct StatisticsView: View {
     private func gameStatsContent(for game: GameType) -> some View {
         let stats = Self.computeStats(for: game)
         let entries = Self.loadEntries(for: game)
+        let countedEntries = entries.filter { Self.countsTowardStats($0.meta) }
 
         VStack(spacing: 24) {
             // Primary stats grid
@@ -56,8 +57,11 @@ struct StatisticsView: View {
                 }
 
                 // Personal best indicator
-                if stats.gamesWon > 1 {
-                    let todayIsPB = StreakManager.isPersonalBest(game: game, time: stats.bestTime)
+                if stats.gamesWon > 1,
+                   let todayEntry = countedEntries.first(where: {
+                       $0.date == Self.todayKey && $0.meta.finished && $0.meta.finishTime > 0
+                   }) {
+                    let todayIsPB = StreakManager.isPersonalBest(game: game, time: todayEntry.meta.finishTime)
                     if todayIsPB {
                         HStack(spacing: 6) {
                             Image(systemName: "star.fill")
@@ -77,14 +81,14 @@ struct StatisticsView: View {
                 Divider().padding(.horizontal)
 
                 // Time sparkline
-                if entries.filter({ $0.meta.finished && $0.meta.finishTime > 0 }).count >= 2 {
+                if countedEntries.filter({ $0.meta.finished && $0.meta.finishTime > 0 }).count >= 2 {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Solve Times")
                             .font(.subheadline.weight(.semibold))
                             .padding(.horizontal)
 
                         SparklineView(
-                            values: entries
+                            values: countedEntries
                                 .filter { $0.meta.finished && $0.meta.finishTime > 0 }
                                 .suffix(30)
                                 .map { $0.meta.finishTime },
@@ -104,8 +108,8 @@ struct StatisticsView: View {
                         .padding(.horizontal)
 
                     CalendarHeatMap(
-                        completedDates: Set(entries.filter { $0.meta.finished }.map { $0.date }),
-                        startedDates: Set(entries.filter { $0.meta.started }.map { $0.date }),
+                        completedDates: Set(countedEntries.filter { $0.meta.finished }.map { $0.date }),
+                        startedDates: Set(countedEntries.filter { $0.meta.started }.map { $0.date }),
                         accentColor: game.accentColor
                     )
                     .padding(.horizontal)
@@ -241,6 +245,7 @@ struct StatisticsView: View {
         var elapsedTime: TimeInterval
         var finishTime: TimeInterval
         var lastUpdated: Date
+        var isPractice: Bool?
     }
 
     struct GameStats {
@@ -280,26 +285,28 @@ struct StatisticsView: View {
         return entries
     }
 
+    private static var todayKey: String {
+        PuzzleDay.storageKey(for: PuzzleDay.today)
+    }
+
+    private static func countsTowardStats(_ meta: DailyMeta) -> Bool {
+        meta.isPractice != true
+    }
+
     private static func computeStats(for game: GameType) -> GameStats {
-        let entries = loadEntries(for: game)
+        let entries = loadEntries(for: game).filter { countsTowardStats($0.meta) }
         let played = entries.filter { $0.meta.started }.count
         let won = entries.filter { $0.meta.finished }.count
-
-        let fmt = DateFormatter()
-        fmt.calendar = Calendar(identifier: .gregorian)
-        fmt.locale = Locale(identifier: "en_US_POSIX")
-        fmt.timeZone = TimeZone(secondsFromGMT: 0)
-        fmt.dateFormat = "yyyy-MM-dd"
 
         let wonDates = Set(entries.filter { $0.meta.finished }.map { $0.date })
 
         var currentStreak = 0
-        var checkDate = Date()
+        var checkDate = PuzzleDay.today
         while true {
-            let ds = fmt.string(from: checkDate)
+            let ds = PuzzleDay.storageKey(for: checkDate)
             if wonDates.contains(ds) {
                 currentStreak += 1
-                checkDate = Calendar.current.date(byAdding: .day, value: -1, to: checkDate)!
+                checkDate = PuzzleDay.addDays(-1, to: checkDate)
             } else {
                 break
             }
@@ -307,18 +314,18 @@ struct StatisticsView: View {
 
         var maxStreak = 0
         var streak = 0
-        if let firstDate = entries.first.flatMap({ fmt.date(from: $0.date) }),
-           let lastDate = entries.last.flatMap({ fmt.date(from: $0.date) }) {
+        if let firstDate = entries.first.flatMap({ PuzzleDay.date(fromStorageKey: $0.date) }),
+           let lastDate = entries.last.flatMap({ PuzzleDay.date(fromStorageKey: $0.date) }) {
             var day = firstDate
             while day <= lastDate {
-                let ds = fmt.string(from: day)
+                let ds = PuzzleDay.storageKey(for: day)
                 if wonDates.contains(ds) {
                     streak += 1
                     maxStreak = max(maxStreak, streak)
                 } else {
                     streak = 0
                 }
-                day = Calendar.current.date(byAdding: .day, value: 1, to: day)!
+                day = PuzzleDay.addDays(1, to: day)
             }
         }
         maxStreak = max(maxStreak, currentStreak)
@@ -343,6 +350,7 @@ struct StatisticsView: View {
         for game in GameType.allCases {
             let entries = loadEntries(for: game)
             for e in entries {
+                guard countsTowardStats(e.meta) else { continue }
                 if e.meta.finished { completed.insert(e.date) }
                 if e.meta.started { started.insert(e.date) }
             }
@@ -351,33 +359,7 @@ struct StatisticsView: View {
     }
 
     private static func dailySweepCount() -> Int {
-        let prefixes = ["diagone_meta_", "rhymeagrams_meta_", "tumblepuns_meta_"]
-        var allDates = Set<String>()
-        let allKeys = UserDefaults.standard.dictionaryRepresentation().keys
-        for key in allKeys {
-            for p in prefixes where key.hasPrefix(p) {
-                allDates.insert(String(key.dropFirst(p.count)))
-            }
-        }
-
-        let fmt = DateFormatter()
-        fmt.calendar = Calendar(identifier: .gregorian)
-        fmt.locale = Locale(identifier: "en_US_POSIX")
-        fmt.timeZone = TimeZone(secondsFromGMT: 0)
-        fmt.dateFormat = "yyyy-MM-dd"
-
-        var count = 0
-        for date in allDates {
-            let allDone = ["diagone", "rhymeagrams", "tumblepuns"].allSatisfy { prefix in
-                let key = "\(prefix)_meta_\(date)"
-                guard let data = UserDefaults.standard.data(forKey: key),
-                      let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                      let finished = json["finished"] as? Bool else { return false }
-                return finished
-            }
-            if allDone { count += 1 }
-        }
-        return count
+        StreakManager.dailySweepCount()
     }
 }
 
@@ -463,17 +445,11 @@ struct CalendarHeatMap: View {
     private let daySpacing: CGFloat = 3
 
     private var days: [String] {
-        let fmt = DateFormatter()
-        fmt.calendar = Calendar(identifier: .gregorian)
-        fmt.locale = Locale(identifier: "en_US_POSIX")
-        fmt.timeZone = TimeZone(secondsFromGMT: 0)
-        fmt.dateFormat = "yyyy-MM-dd"
-
         var result: [String] = []
         let totalDays = weeksToShow * 7
         for i in stride(from: totalDays - 1, through: 0, by: -1) {
-            let date = Calendar.current.date(byAdding: .day, value: -i, to: Date())!
-            result.append(fmt.string(from: date))
+            let date = PuzzleDay.addDays(-i, to: PuzzleDay.today)
+            result.append(PuzzleDay.storageKey(for: date))
         }
         return result
     }

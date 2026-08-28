@@ -1,7 +1,8 @@
 import Foundation
 
 /// Centralized streak and daily progress computation.
-/// Reads from the existing DailyMeta UserDefaults entries — no new storage required.
+/// Reads only counted DailyMeta UserDefaults entries for streaks/statistics.
+/// Practice archive sessions are stored separately and surfaced only as archive status.
 enum StreakManager {
 
     // MARK: - Public Types
@@ -31,11 +32,11 @@ enum StreakManager {
     // MARK: - Today's Progress
 
     static func todayProgress() -> DailyProgress {
-        let today = dayString(from: Date())
+        let today = dayString(from: PuzzleDay.today)
         return DailyProgress(
-            diagoneCompleted: isFinished(prefix: "diagone", day: today),
-            rhymeAGramsCompleted: isFinished(prefix: "rhymeagrams", day: today),
-            tumblePunsCompleted: isFinished(prefix: "tumblepuns", day: today)
+            diagoneCompleted: isCountedFinished(prefix: "diagone", day: today),
+            rhymeAGramsCompleted: isCountedFinished(prefix: "rhymeagrams", day: today),
+            tumblePunsCompleted: isCountedFinished(prefix: "tumblepuns", day: today)
         )
     }
 
@@ -65,22 +66,17 @@ enum StreakManager {
     /// Returns true if the given finish time is a new personal best for the game.
     static func isPersonalBest(game: GameType, time: TimeInterval) -> Bool {
         guard time > 0 else { return false }
-        let prefix: String
-        switch game {
-        case .diagone: prefix = "diagone"
-        case .rhymeAGrams: prefix = "rhymeagrams"
-        case .tumblePuns: prefix = "tumblepuns"
-        }
+        let prefix = PuzzleDay.storagePrefix(for: game)
         let metaPrefix = "\(prefix)_meta_"
-        let today = dayString(from: Date())
+        let today = dayString(from: PuzzleDay.today)
         let allKeys = UserDefaults.standard.dictionaryRepresentation().keys
 
         for key in allKeys where key.hasPrefix(metaPrefix) {
             let dateStr = String(key.dropFirst(metaPrefix.count))
             // Skip today — we're comparing against previous days
             guard dateStr != today else { continue }
-            guard let data = UserDefaults.standard.data(forKey: key),
-                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            guard let json = metaJSON(forKey: key),
+                  !isPractice(json),
                   let finished = json["finished"] as? Bool, finished,
                   let ft = json["finishTime"] as? Double, ft > 0 else { continue }
             if ft <= time { return false }
@@ -91,8 +87,8 @@ enum StreakManager {
             guard key.hasPrefix(metaPrefix) else { return false }
             let dateStr = String(key.dropFirst(metaPrefix.count))
             guard dateStr != today else { return false }
-            guard let data = UserDefaults.standard.data(forKey: key),
-                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            guard let json = metaJSON(forKey: key),
+                  !isPractice(json),
                   let finished = json["finished"] as? Bool else { return false }
             return finished
         }
@@ -120,17 +116,78 @@ enum StreakManager {
     }
 
     static func puzzleStatus(game: GameType, day: String) -> PuzzleStatus {
-        let prefix: String
-        switch game {
-        case .diagone: prefix = "diagone"
-        case .rhymeAGrams: prefix = "rhymeagrams"
-        case .tumblePuns: prefix = "tumblepuns"
+        let prefix = PuzzleDay.storagePrefix(for: game)
+        let countedKey = "\(prefix)_meta_\(day)"
+        let practiceKey = "\(prefix)_practice_meta_\(day)"
+
+        if let counted = status(forMetaKey: countedKey), case .completed = counted {
+            return counted
         }
+        if let practice = status(forMetaKey: practiceKey), case .completed = practice {
+            return practice
+        }
+        if let counted = status(forMetaKey: countedKey), case .inProgress = counted {
+            return counted
+        }
+        if let practice = status(forMetaKey: practiceKey) {
+            return practice
+        }
+        return .notStarted
+    }
+
+    static func finishTime(game: GameType, on date: Date) -> TimeInterval? {
+        let prefix = PuzzleDay.storagePrefix(for: game)
+        let day = dayString(from: date)
         let key = "\(prefix)_meta_\(day)"
-        guard let data = UserDefaults.standard.data(forKey: key),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            return .notStarted
+        guard let json = metaJSON(forKey: key),
+              !isPractice(json),
+              let finished = json["finished"] as? Bool, finished,
+              let finishTime = json["finishTime"] as? Double, finishTime > 0 else { return nil }
+        return finishTime
+    }
+
+    static func dailySweepFinishTimes(on date: Date) -> [GameType: TimeInterval]? {
+        var times: [GameType: TimeInterval] = [:]
+        for game in GameType.allCases {
+            guard let time = finishTime(game: game, on: date) else { return nil }
+            times[game] = time
         }
+        return times
+    }
+
+    static func personalBestTime(game: GameType) -> TimeInterval? {
+        let prefix = PuzzleDay.storagePrefix(for: game)
+        let metaPrefix = "\(prefix)_meta_"
+        return UserDefaults.standard.dictionaryRepresentation().keys.compactMap { key -> TimeInterval? in
+            guard key.hasPrefix(metaPrefix),
+                  let json = metaJSON(forKey: key),
+                  !isPractice(json),
+                  let finished = json["finished"] as? Bool, finished,
+                  let finishTime = json["finishTime"] as? Double, finishTime > 0 else { return nil }
+            return finishTime
+        }
+        .min()
+    }
+
+    static func dailySweepCount() -> Int {
+        let prefixes = GameType.allCases.map { "\(PuzzleDay.storagePrefix(for: $0))_meta_" }
+        var allDates = Set<String>()
+        for key in UserDefaults.standard.dictionaryRepresentation().keys {
+            for prefix in prefixes where key.hasPrefix(prefix) {
+                allDates.insert(String(key.dropFirst(prefix.count)))
+            }
+        }
+
+        return allDates.reduce(0) { count, day in
+            let allDone = GameType.allCases.allSatisfy { game in
+                isCountedFinished(prefix: PuzzleDay.storagePrefix(for: game), day: day)
+            }
+            return count + (allDone ? 1 : 0)
+        }
+    }
+
+    private static func status(forMetaKey key: String) -> PuzzleStatus? {
+        guard let json = metaJSON(forKey: key) else { return nil }
         let finished = json["finished"] as? Bool ?? false
         let elapsed = json["elapsedTime"] as? Double ?? 0
         let finishTime = json["finishTime"] as? Double ?? 0
@@ -141,40 +198,40 @@ enum StreakManager {
         if started {
             return .inProgress(elapsed: elapsed)
         }
-        return .notStarted
+        return nil
     }
 
     // MARK: - Internals
 
-    private static let fmt: DateFormatter = {
-        let f = DateFormatter()
-        f.calendar = Calendar(identifier: .gregorian)
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = TimeZone(secondsFromGMT: 0)
-        f.dateFormat = "yyyy-MM-dd"
-        return f
-    }()
-
     private static func dayString(from date: Date) -> String {
-        fmt.string(from: date)
+        PuzzleDay.storageKey(for: date)
     }
 
-    private static func isFinished(prefix: String, day: String) -> Bool {
+    private static func isCountedFinished(prefix: String, day: String) -> Bool {
         let key = "\(prefix)_meta_\(day)"
-        guard let data = UserDefaults.standard.data(forKey: key),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+        guard let json = metaJSON(forKey: key),
+              !isPractice(json),
               let finished = json["finished"] as? Bool else { return false }
         return finished
     }
 
+    private static func metaJSON(forKey key: String) -> [String: Any]? {
+        guard let data = UserDefaults.standard.data(forKey: key) else { return nil }
+        return try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+    }
+
+    private static func isPractice(_ json: [String: Any]) -> Bool {
+        json["isPractice"] as? Bool ?? false
+    }
+
     private static func currentStreak(prefix: String) -> Int {
         var streak = 0
-        var date = Date()
+        var date = PuzzleDay.today
         while true {
             let ds = dayString(from: date)
-            if isFinished(prefix: prefix, day: ds) {
+            if isCountedFinished(prefix: prefix, day: ds) {
                 streak += 1
-                date = Calendar.current.date(byAdding: .day, value: -1, to: date)!
+                date = PuzzleDay.addDays(-1, to: date)
             } else {
                 break
             }
@@ -185,15 +242,15 @@ enum StreakManager {
     private static func combinedStreakInfo() -> (current: Int, best: Int) {
         // Walk backwards from today for current
         var current = 0
-        var date = Date()
+        var date = PuzzleDay.today
         while true {
             let ds = dayString(from: date)
-            let allDone = isFinished(prefix: "diagone", day: ds)
-                       && isFinished(prefix: "rhymeagrams", day: ds)
-                       && isFinished(prefix: "tumblepuns", day: ds)
+            let allDone = isCountedFinished(prefix: "diagone", day: ds)
+                       && isCountedFinished(prefix: "rhymeagrams", day: ds)
+                       && isCountedFinished(prefix: "tumblepuns", day: ds)
             if allDone {
                 current += 1
-                date = Calendar.current.date(byAdding: .day, value: -1, to: date)!
+                date = PuzzleDay.addDays(-1, to: date)
             } else {
                 break
             }
@@ -208,8 +265,8 @@ enum StreakManager {
             }
         }
 
-        guard let earliest = allDates.compactMap({ fmt.date(from: $0) }).min(),
-              let latest = allDates.compactMap({ fmt.date(from: $0) }).max() else {
+        guard let earliest = allDates.compactMap({ PuzzleDay.date(fromStorageKey: $0) }).min(),
+              let latest = allDates.compactMap({ PuzzleDay.date(fromStorageKey: $0) }).max() else {
             return (current, current)
         }
 
@@ -218,16 +275,16 @@ enum StreakManager {
         var d = earliest
         while d <= latest {
             let ds = dayString(from: d)
-            let allDone = isFinished(prefix: "diagone", day: ds)
-                       && isFinished(prefix: "rhymeagrams", day: ds)
-                       && isFinished(prefix: "tumblepuns", day: ds)
+            let allDone = isCountedFinished(prefix: "diagone", day: ds)
+                       && isCountedFinished(prefix: "rhymeagrams", day: ds)
+                       && isCountedFinished(prefix: "tumblepuns", day: ds)
             if allDone {
                 streak += 1
                 best = max(best, streak)
             } else {
                 streak = 0
             }
-            d = Calendar.current.date(byAdding: .day, value: 1, to: d)!
+            d = PuzzleDay.addDays(1, to: d)
         }
 
         return (current, max(best, current))

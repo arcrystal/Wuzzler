@@ -193,6 +193,11 @@ enum TumblePunsPuzzleLibrary {
     private static var cacheLoaded = false
 
     static func loadPuzzleMap(resource: String = "tumblepuns_puzzles", subdirectory: String? = nil) -> [String: PuzzleData]? {
+        if let remote = PuzzleContentService.shared.tumblePunsMap(), !remote.isEmpty {
+            cache = remote
+            cacheLoaded = true
+            return remote
+        }
         if cacheLoaded { return cache }
         let bundle = Bundle.main
 
@@ -221,12 +226,7 @@ enum TumblePunsPuzzleLibrary {
     }
 
     static func loadPuzzle(for date: Date) -> TumblePunsPuzzle {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MM/dd/yyyy"
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone(secondsFromGMT: 0)
-        let dateKey = formatter.string(from: date)
+        let dateKey = PuzzleDay.puzzleKey(for: date)
 
         if let puzzleMap = loadPuzzleMap(),
            let puzzleData = puzzleMap[dateKey] {
@@ -267,11 +267,10 @@ enum TumblePunsPuzzleLibrary {
     /// produces the same scramble, but the letters are shuffled.
     private static func scramble(_ word: String, seed: String) -> String {
         var chars = Array(word.uppercased())
-        // Use a simple seeded shuffle based on the word + date
-        var h = seed.hashValue &+ word.hashValue
+        var state = stableHash("\(seed)|\(word.uppercased())")
         for i in stride(from: chars.count - 1, through: 1, by: -1) {
-            h = h &* 6364136223846793005 &+ 1442695040888963407
-            let j = abs(h) % (i + 1)
+            state = state &* 2862933555777941757 &+ 3037000493
+            let j = Int(state % UInt64(i + 1))
             chars.swapAt(i, j)
         }
         // If the scramble happens to match the original, swap first two
@@ -281,5 +280,14 @@ enum TumblePunsPuzzleLibrary {
             return String(chars)
         }
         return result
+    }
+
+    private static func stableHash(_ value: String) -> UInt64 {
+        var hash: UInt64 = 14695981039346656037
+        for byte in value.utf8 {
+            hash ^= UInt64(byte)
+            hash = hash &* 1099511628211
+        }
+        return hash
     }
 }

@@ -67,7 +67,7 @@ struct HowToPlayView: View {
                 TutorialStep(icon: "circle.grid.3x3", title: "Welcome to TumblePun", description: "Unscramble four jumbled words, then use the highlighted letters to solve a punny clue."),
                 TutorialStep(icon: "arrow.triangle.2.circlepath", title: "Unscramble Words", description: "Tap a word to select it, then type the correct spelling. Use the shuffle button to rearrange the scrambled letters for a fresh look."),
                 TutorialStep(icon: "paintbrush.pointed", title: "Shaded Letters", description: "Each solved word reveals its shaded letters. These special letters combine to form the final answer."),
-                TutorialStep(icon: "lightbulb", title: "Solve the Pun", description: "Read the definition clue, then unscramble the shaded letters to complete the punny final answer."),
+                TutorialStep(icon: "lightbulb", title: "Solve the Pun", description: "Complete all four words to reveal the clue, then unscramble the shaded letters to find the punny final answer."),
             ]
         }
     }

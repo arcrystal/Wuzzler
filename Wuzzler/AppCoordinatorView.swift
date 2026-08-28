@@ -1,48 +1,73 @@
 import SwiftUI
 
-struct AppCoordinatorView: View {
+struct RootCoordinatorView: View {
     enum Route {
         case splash
-        case home
-        case game(GameType, Date)
+        case main
     }
 
     @State private var route: Route = .splash
+    @State private var activeGame: GameLaunch?
+    @StateObject private var gameCenter = GameCenterService.shared
 
     var body: some View {
         Group {
             switch route {
             case .splash:
                 SplashScreen()
-                    .onAppear {
-                        // Preload all puzzle JSON files in the background
-                        DispatchQueue.global(qos: .userInitiated).async {
-                            GameEngine.warmUp()
-                            _ = RhymeAGramsPuzzleLibrary.loadPuzzleMap()
-                            _ = TumblePunsPuzzleLibrary.loadPuzzleMap()
-                        }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-                            withAnimation(.easeOut(duration: 0.4)) {
-                                route = .home
-                            }
-                        }
+                    .task {
+                        await boot()
                     }
-            case .home:
-                HomeView(onGameSelected: { gameType, date in
-                    withAnimation(.easeInOut(duration: 0.25)) {
-                        route = .game(gameType, date)
-                    }
+            case .main:
+                MainTabView(onGameSelected: { launch in
+                    gameCenter.setAccessPointVisible(false)
+                    activeGame = launch
                 })
-            case .game(let gameType, let date):
-                GameCoordinatorView(gameType: gameType, puzzleDate: date, onBackToHome: {
-                    withAnimation(.easeInOut(duration: 0.25)) {
-                        route = .home
-                    }
-                })
+                .accessibilityHidden(activeGame != nil)
+                .onAppear {
+                    gameCenter.setAccessPointVisible(true)
+                }
             }
+        }
+        .environmentObject(gameCenter)
+        .fullScreenCover(item: $activeGame, onDismiss: {
+            gameCenter.setAccessPointVisible(true)
+            NotificationCenter.default.post(name: .gameProgressDidChange, object: nil)
+        }) { launch in
+            GameCoordinatorView(
+                gameType: launch.gameType,
+                puzzleDate: launch.date,
+                countsTowardStats: launch.countsTowardStats,
+                onBackToHome: { activeGame = nil }
+            )
+            .onAppear {
+                gameCenter.setAccessPointVisible(false)
+            }
+        }
+        .sheet(item: $gameCenter.presentation) { presentation in
+            GameCenterControllerPresenter(viewController: presentation.viewController)
+        }
+    }
+
+    private func boot() async {
+        gameCenter.authenticate()
+        Task.detached(priority: .utility) {
+            await PuzzleContentService.shared.refresh()
+        }
+        await Task.detached(priority: .userInitiated) {
+            GameEngine.warmUp()
+            _ = RhymeAGramsPuzzleLibrary.loadPuzzleMap()
+            _ = TumblePunsPuzzleLibrary.loadPuzzleMap()
+            PuzzleContentService.shared.logMissingTodayPuzzles()
+        }.value
+        try? await Task.sleep(nanoseconds: 1_200_000_000)
+        withAnimation(.easeOut(duration: 0.4)) {
+            route = .main
         }
     }
 }
+
+typealias AppCoordinatorView = RootCoordinatorView
 
 // MARK: - Splash Screen
 struct SplashScreen: View {
@@ -83,7 +108,7 @@ struct SplashScreen: View {
     }
 }
 
-fileprivate struct WuzzlerSplashLogo: View {
+struct WuzzlerSplashLogo: View {
     var settled: Bool
     var tileOpacities: [Double]
     var sheenValues: [Double]

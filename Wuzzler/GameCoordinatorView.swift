@@ -3,20 +3,67 @@ import SwiftUI
 struct GameCoordinatorView: View {
     let gameType: GameType
     let puzzleDate: Date
+    let countsTowardStats: Bool
     let onBackToHome: () -> Void
 
     var body: some View {
         Group {
-            switch gameType {
-            case .diagone:
-                DiagoneCoordinatorView(puzzleDate: puzzleDate, onBackToHome: onBackToHome)
-            case .rhymeAGrams:
-                RhymeAGramsCoordinatorView(puzzleDate: puzzleDate, onBackToHome: onBackToHome)
-            case .tumblePuns:
-                TumblePunsCoordinatorView(puzzleDate: puzzleDate, onBackToHome: onBackToHome)
+            if PuzzleContentService.shared.hasPuzzle(for: gameType, on: puzzleDate) {
+                switch gameType {
+                case .diagone:
+                    DiagoneCoordinatorView(puzzleDate: puzzleDate, countsTowardStats: countsTowardStats, onBackToHome: onBackToHome)
+                case .rhymeAGrams:
+                    RhymeAGramsCoordinatorView(puzzleDate: puzzleDate, countsTowardStats: countsTowardStats, onBackToHome: onBackToHome)
+                case .tumblePuns:
+                    TumblePunsCoordinatorView(puzzleDate: puzzleDate, countsTowardStats: countsTowardStats, onBackToHome: onBackToHome)
+                }
+            } else {
+                MissingPuzzleView(gameType: gameType, date: puzzleDate, onBackToHome: onBackToHome)
             }
         }
         .environment(\.gameAccent, gameType.accentColor)
+    }
+}
+
+private struct MissingPuzzleView: View {
+    let gameType: GameType
+    let date: Date
+    let onBackToHome: () -> Void
+
+    var body: some View {
+        VStack(spacing: 18) {
+            Spacer()
+
+            Image(systemName: "lock.fill")
+                .font(.system(size: 44, weight: .semibold))
+                .foregroundStyle(gameType.accentColor)
+
+            Text("Puzzle coming soon")
+                .font(.title2.weight(.bold))
+
+            Text("\(gameType.displayName) is not available for \(PuzzleDay.displayDate(date)) yet.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Spacer()
+
+            Button {
+                onBackToHome()
+            } label: {
+                Label("Back", systemImage: "chevron.left")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(gameType.accentColor, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+            .padding(.horizontal, 32)
+            .padding(.bottom, 40)
+        }
+        .padding(.horizontal, 28)
+        .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
     }
 }
 
@@ -25,14 +72,16 @@ private struct DiagoneCoordinatorView: View {
     enum Route { case loading, playing }
 
     let puzzleDate: Date
+    let countsTowardStats: Bool
     let onBackToHome: () -> Void
     @State private var route: Route = .loading
     @StateObject private var viewModel: GameViewModel
 
-    init(puzzleDate: Date, onBackToHome: @escaping () -> Void) {
+    init(puzzleDate: Date, countsTowardStats: Bool, onBackToHome: @escaping () -> Void) {
         self.puzzleDate = puzzleDate
+        self.countsTowardStats = countsTowardStats
         self.onBackToHome = onBackToHome
-        _viewModel = StateObject(wrappedValue: GameViewModel(puzzleDate: puzzleDate))
+        _viewModel = StateObject(wrappedValue: GameViewModel(puzzleDate: puzzleDate, countsTowardStats: countsTowardStats))
     }
 
     var body: some View {
@@ -60,7 +109,7 @@ private struct DiagoneCoordinatorView: View {
                     ],
                     confettiColors: [.diagoneAccent, .yellow, .orange, .white],
                     shareCardBuilder: { vm in
-                        let streak = StreakManager.streakInfo().diagoneStreak
+                        let streak = vm.countsTowardStats ? StreakManager.streakInfo().diagoneStreak : 0
                         return ShareCardBuilder.diagoneCard(time: vm.finishTime, streakCount: streak)
                     },
                     gameContent: { onPause in
@@ -86,14 +135,16 @@ private struct RhymeAGramsCoordinatorView: View {
     enum Route { case loading, playing }
 
     let puzzleDate: Date
+    let countsTowardStats: Bool
     let onBackToHome: () -> Void
     @State private var route: Route = .loading
     @StateObject private var viewModel: RhymeAGramsViewModel
 
-    init(puzzleDate: Date, onBackToHome: @escaping () -> Void) {
+    init(puzzleDate: Date, countsTowardStats: Bool, onBackToHome: @escaping () -> Void) {
         self.puzzleDate = puzzleDate
+        self.countsTowardStats = countsTowardStats
         self.onBackToHome = onBackToHome
-        _viewModel = StateObject(wrappedValue: RhymeAGramsViewModel(puzzleDate: puzzleDate))
+        _viewModel = StateObject(wrappedValue: RhymeAGramsViewModel(puzzleDate: puzzleDate, countsTowardStats: countsTowardStats))
     }
 
     var body: some View {
@@ -120,7 +171,7 @@ private struct RhymeAGramsCoordinatorView: View {
                     ],
                     confettiColors: [.rhymeAGramsAccent, .yellow, .green, .white],
                     shareCardBuilder: { vm in
-                        let streak = StreakManager.streakInfo().rhymeAGramsStreak
+                        let streak = vm.countsTowardStats ? StreakManager.streakInfo().rhymeAGramsStreak : 0
                         return ShareCardBuilder.rhymeAGramsCard(time: vm.finishTime, streakCount: streak)
                     },
                     gameContent: { onPause in
@@ -143,14 +194,16 @@ private struct TumblePunsCoordinatorView: View {
     enum Route { case loading, playing }
 
     let puzzleDate: Date
+    let countsTowardStats: Bool
     let onBackToHome: () -> Void
     @State private var route: Route = .loading
     @StateObject private var viewModel: TumblePunsViewModel
 
-    init(puzzleDate: Date, onBackToHome: @escaping () -> Void) {
+    init(puzzleDate: Date, countsTowardStats: Bool, onBackToHome: @escaping () -> Void) {
         self.puzzleDate = puzzleDate
+        self.countsTowardStats = countsTowardStats
         self.onBackToHome = onBackToHome
-        _viewModel = StateObject(wrappedValue: TumblePunsViewModel(puzzleDate: puzzleDate))
+        _viewModel = StateObject(wrappedValue: TumblePunsViewModel(puzzleDate: puzzleDate, countsTowardStats: countsTowardStats))
     }
 
     var body: some View {
@@ -168,17 +221,17 @@ private struct TumblePunsCoordinatorView: View {
                 GameFlowView(
                     viewModel: viewModel,
                     gameName: "TumblePun",
-                    gameDescription: "Unscramble words and solve the punny definition",
+                    gameDescription: "Unscramble words and solve the punny clue",
                     iconView: TumblePunsIconView(size: 80),
                     tutorialSteps: [
                         TutorialStep(icon: "circle.grid.3x3", title: "Welcome to TumblePun", description: "Unscramble four jumbled words, then use the highlighted letters to solve a punny clue."),
                         TutorialStep(icon: "arrow.triangle.2.circlepath", title: "Unscramble Words", description: "Tap a word to select it, then type the correct spelling. Use the shuffle button to rearrange the scrambled letters for a fresh look."),
                         TutorialStep(icon: "paintbrush.pointed", title: "Shaded Letters", description: "Each solved word reveals its shaded letters. These special letters combine to form the final answer."),
-                        TutorialStep(icon: "lightbulb", title: "Solve the Pun", description: "Read the definition clue, then unscramble the shaded letters to complete the punny final answer."),
+                        TutorialStep(icon: "lightbulb", title: "Solve the Pun", description: "Complete all four words to reveal the clue, then unscramble the shaded letters to find the punny final answer."),
                     ],
                     confettiColors: [.tumblePunsAccent, .yellow, .red, .white],
                     shareCardBuilder: { vm in
-                        let streak = StreakManager.streakInfo().tumblePunsStreak
+                        let streak = vm.countsTowardStats ? StreakManager.streakInfo().tumblePunsStreak : 0
                         return ShareCardBuilder.tumblePunsCard(
                             wordLengths: vm.puzzle.words.map { $0.solution.count },
                             shadedIndices: vm.puzzle.words.map { $0.shadedIndices },

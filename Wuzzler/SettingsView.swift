@@ -20,6 +20,7 @@ struct SettingsView: View {
     @AppStorage("daily_reminder_hour") private var dailyReminderHour: Int = 9
     @AppStorage("daily_reminder_minute") private var dailyReminderMinute: Int = 0
     @State private var showResetConfirmation = false
+    @State private var showNotificationDenied = false
 
     var body: some View {
         Form {
@@ -75,6 +76,15 @@ struct SettingsView: View {
         } message: {
             Text("Tutorials will show again the next time you open each game.")
         }
+        .alert("Notifications are off", isPresented: $showNotificationDenied) {
+            Button("Not Now", role: .cancel) {}
+            Button("Open Settings") {
+                guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+                UIApplication.shared.open(url)
+            }
+        } message: {
+            Text("Allow notifications in Settings to receive your daily puzzle reminder.")
+        }
     }
 
     private var reminderTimeBinding: Binding<Date> {
@@ -95,12 +105,15 @@ struct SettingsView: View {
 
     private func scheduleDailyReminder() {
         let center = UNUserNotificationCenter.current()
-        center.requestAuthorization(options: [.alert, .sound]) { granted, _ in
+        center.requestAuthorization(options: [.alert, .sound]) { granted, error in
             guard granted else {
-                DispatchQueue.main.async { dailyReminderEnabled = false }
+                DispatchQueue.main.async {
+                    dailyReminderEnabled = false
+                    showNotificationDenied = error == nil
+                }
                 return
             }
-            center.removeAllPendingNotificationRequests()
+            center.removePendingNotificationRequests(withIdentifiers: ["daily_reminder"])
             let content = UNMutableNotificationContent()
             content.title = "Wuzzler"
             content.body = "Your daily puzzles are ready!"
@@ -110,7 +123,10 @@ struct SettingsView: View {
             dateComponents.minute = dailyReminderMinute
             let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
             let request = UNNotificationRequest(identifier: "daily_reminder", content: content, trigger: trigger)
-            center.add(request)
+            center.add(request) { error in
+                guard error != nil else { return }
+                DispatchQueue.main.async { dailyReminderEnabled = false }
+            }
         }
     }
 

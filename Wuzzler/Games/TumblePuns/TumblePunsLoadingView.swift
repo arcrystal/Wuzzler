@@ -29,7 +29,7 @@ struct TumblePunsLoadingView: View {
             TutorialStep(
                 icon: "lightbulb",
                 title: "Solve the Pun",
-                description: "Read the definition clue, then unscramble the shaded letters to complete the punny final answer."
+                description: "Complete all four words to reveal the clue, then unscramble the shaded letters to find the punny final answer."
             ),
         ]
     }
@@ -62,17 +62,11 @@ struct TumblePunsLoadingView: View {
                 }
             }
 
-            Button {
-                onStart()
-            } label: {
-                Text("Play")
-                    .font(.title3.weight(.semibold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(Capsule().fill(gameAccent))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 32)
-            }
+            PuzzlePreparationControl(
+                gameName: "TumblePun",
+                accessibilityPrefix: "tumblepuns",
+                onStart: onStart
+            )
 
             Spacer()
 
@@ -105,15 +99,10 @@ struct TumblePunsLoadingView: View {
     }
 
     private var formattedDate: String {
-        let df = DateFormatter()
-        df.dateStyle = .long
-        df.timeStyle = .none
-        return df.string(from: date)
+        PuzzleDay.displayDate(date, style: .long)
     }
 
     private var numberString: String {
-        let df = DateFormatter(); df.dateFormat = "yyyyMMdd"
-        let seed = Int(df.string(from: date)) ?? 0
-        return "No. \(seed % 5000)"
+        "No. \(PuzzleDay.puzzleNumber(for: date).dropFirst())"
     }
 }

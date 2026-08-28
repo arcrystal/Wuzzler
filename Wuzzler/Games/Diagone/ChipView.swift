@@ -82,8 +82,11 @@ struct ChipView: View {
                 }
                 .opacity(inactive ? 0.25 : 1.0)
                 .allowsHitTesting(!inactive)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(Text(piece.letters))
+                .accessibilityValue(Text(inactive ? "placed" : "available"))
+                .accessibilityIdentifier("diagone-chip-\(piece.id)")
             }
         }
     }
 }
-

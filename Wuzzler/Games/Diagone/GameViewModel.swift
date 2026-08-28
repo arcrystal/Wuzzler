@@ -16,14 +16,19 @@ final class GameViewModel: GameFlowViewModel {
     var dragGlobalLocation: CGPoint? = nil
     var boardDragAnchorFraction: CGPoint = CGPoint(x: 0.5, y: 0.5)
     var boardFrameGlobal: CGRect = .zero
+    var chipTrayFrameGlobal: CGRect = .zero
     let dragPositionDidChange = PassthroughSubject<Void, Never>()
 
+    private var engineStateCancellable: AnyCancellable?
     private var winWaveTask: Task<Void, Never>?
 
-    init(puzzleDate: Date = Date()) {
+    init(puzzleDate: Date = Date(), countsTowardStats: Bool? = nil) {
         let engine = GameEngine(puzzleDate: puzzleDate)
         self.engine = engine
-        super.init(storageKeyPrefix: "diagone", gameType: .diagone, puzzleDate: puzzleDate)
+        super.init(storageKeyPrefix: "diagone", gameType: .diagone, puzzleDate: puzzleDate, countsTowardStats: countsTowardStats)
+        engineStateCancellable = engine.objectWillChange.sink { [weak self] _ in
+            self?.objectWillChange.send()
+        }
 
         // Only restore board state if meta indicates we started this puzzle.
         if started, let restored = Self.loadSavedBoardState(for: engine.configuration, storageKey: storageKey) {
@@ -44,6 +49,9 @@ final class GameViewModel: GameFlowViewModel {
         showMainInput = false
         engine.reset()
         mainInput = Array(repeating: "", count: 6)
+#if DEBUG
+        seedUITestPlacementIfNeeded()
+#endif
     }
 
     override func onClearGame() {
@@ -155,7 +163,7 @@ final class GameViewModel: GameFlowViewModel {
 
     // MARK: - Main Diagonal
 
-    private func clearMainDiagonal(hideInput: Bool = true) {
+    private func clearMainDiagonal(hideInput: Bool = true, persist: Bool = true) {
         let count = engine.state.mainDiagonal.cells.count
         let empty = Array(repeating: "", count: count)
         mainInput = empty
@@ -163,7 +171,9 @@ final class GameViewModel: GameFlowViewModel {
             showMainInput = false
         }
         engine.setMainDiagonal(empty)
-        saveState()
+        if persist {
+            saveState()
+        }
     }
 
     func commitMainInput() {
@@ -210,14 +220,19 @@ final class GameViewModel: GameFlowViewModel {
         return success
     }
 
-    func removePiece(from targetId: String) {
-        guard !finished else { return }
-        guard let removedId = engine.removePiece(from: targetId) else { return }
+    @discardableResult
+    func removePiece(from targetId: String) -> Bool {
+        guard !finished else { return false }
+        guard let removedId = engine.removePiece(from: targetId) else { return false }
         fadingPanePieceIds.remove(removedId)
         withAnimation(.easeInOut(duration: 0.1)) {
-            clearMainDiagonal()
+            clearMainDiagonal(persist: false)
         }
-        saveState()
+        // Coalesce encoding and UserDefaults I/O after the visual state change.
+        // pause() still flushes immediately, so this cannot lose progress when
+        // the player leaves the game before the debounce fires.
+        debouncedSave()
+        return true
     }
 
     // MARK: - Drag Hooks
@@ -255,13 +270,17 @@ final class GameViewModel: GameFlowViewModel {
         let p = CGPoint(x: globalLocation.x - boardFrameGlobal.minX,
                         y: globalLocation.y - boardFrameGlobal.minY)
         let side = min(boardFrameGlobal.size.width, boardFrameGlobal.size.height)
-        let cell = side / 6.0
+        let gap = BoardView.gridGap(for: side)
+        let cell = (side - gap * 5.0) / 6.0
+        let pitch = cell + gap
         let valid = Set(engine.validTargets(for: pid))
 
         func distanceToDiagonal(_ t: GameTarget, point: CGPoint) -> (distance: CGFloat, length: Int) {
             guard let first = t.cells.first, let last = t.cells.last else { return (.greatestFiniteMagnitude, t.length) }
-            let a = CGPoint(x: (CGFloat(first.col) + 0.5) * cell, y: (CGFloat(first.row) + 0.5) * cell)
-            let b = CGPoint(x: (CGFloat(last.col) + 0.5) * cell, y: (CGFloat(last.row) + 0.5) * cell)
+            let a = CGPoint(x: CGFloat(first.col) * pitch + cell / 2.0,
+                            y: CGFloat(first.row) * pitch + cell / 2.0)
+            let b = CGPoint(x: CGFloat(last.col) * pitch + cell / 2.0,
+                            y: CGFloat(last.row) * pitch + cell / 2.0)
             let ab = CGPoint(x: b.x - a.x, y: b.y - a.y)
             let ap = CGPoint(x: point.x - a.x, y: point.y - a.y)
             let abLen2 = max(ab.x*ab.x + ab.y*ab.y, 0.0001)
@@ -282,10 +301,10 @@ final class GameViewModel: GameFlowViewModel {
             let rows = t.cells.map(\.row)
             let cols = t.cells.map(\.col)
             if let minR = rows.min(), let maxR = rows.max(), let minC = cols.min(), let maxC = cols.max() {
-                let box = CGRect(x: CGFloat(minC) * cell - cell * 0.25,
-                                 y: CGFloat(minR) * cell - cell * 0.25,
-                                 width: CGFloat(maxC - minC + 1) * cell + cell * 0.5,
-                                 height: CGFloat(maxR - minR + 1) * cell + cell * 0.5)
+                let box = CGRect(x: CGFloat(minC) * pitch - cell * 0.25,
+                                 y: CGFloat(minR) * pitch - cell * 0.25,
+                                 width: CGFloat(maxC - minC) * pitch + cell * 1.5,
+                                 height: CGFloat(maxR - minR) * pitch + cell * 1.5)
                 guard box.contains(p) else { continue }
             }
             guard dist <= radius else { continue }
@@ -301,6 +320,7 @@ final class GameViewModel: GameFlowViewModel {
     func finishDrag() {
         guard !finished else { return }
         let sourceTarget = dragSourceTargetId
+        let releaseLocation = dragGlobalLocation
         defer {
             draggingPieceId = nil
             dragHoverTargetId = nil
@@ -325,6 +345,14 @@ final class GameViewModel: GameFlowViewModel {
         }
 
         if let src = sourceTarget {
+            if isDropInChipTray(releaseLocation) {
+                fadingPanePieceIds.remove(pid)
+                clearMainDiagonal(persist: false)
+                debouncedSave()
+                Haptics.impactAfterUIUpdate(.soft)
+                return
+            }
+
             let (ok, _) = engine.placeOrReplace(pieceId: pid, on: src)
             if ok {
                 fadingPanePieceIds.insert(pid)
@@ -349,10 +377,13 @@ final class GameViewModel: GameFlowViewModel {
         dragHoverTargetId = nil
 
         if let startCell = target.cells.first, boardFrameGlobal != .zero {
-            let boardCellSize = boardFrameGlobal.width / 6.0
-            let pieceSize = CGFloat(target.length) * boardCellSize
-            let pieceMinX = boardFrameGlobal.minX + CGFloat(startCell.col) * boardCellSize
-            let pieceMinY = boardFrameGlobal.minY + CGFloat(startCell.row) * boardCellSize
+            let side = min(boardFrameGlobal.width, boardFrameGlobal.height)
+            let gap = BoardView.gridGap(for: side)
+            let boardCellSize = (side - gap * 5.0) / 6.0
+            let pitch = boardCellSize + gap
+            let pieceSize = CGFloat(target.length) * boardCellSize + CGFloat(max(target.length - 1, 0)) * gap
+            let pieceMinX = boardFrameGlobal.minX + CGFloat(startCell.col) * pitch
+            let pieceMinY = boardFrameGlobal.minY + CGFloat(startCell.row) * pitch
             boardDragAnchorFraction = CGPoint(
                 x: (fingerGlobal.x - pieceMinX) / pieceSize,
                 y: (fingerGlobal.y - pieceMinY) / pieceSize
@@ -361,7 +392,13 @@ final class GameViewModel: GameFlowViewModel {
 
         _ = engine.removePiece(from: targetId)
         fadingPanePieceIds.insert(pieceId)
-        clearMainDiagonal()
+        clearMainDiagonal(persist: false)
+        debouncedSave()
+    }
+
+    private func isDropInChipTray(_ point: CGPoint?) -> Bool {
+        guard let point, chipTrayFrameGlobal != .zero else { return false }
+        return chipTrayFrameGlobal.insetBy(dx: -24, dy: -24).contains(point)
     }
 
     func isPaneChipInactive(_ pieceId: String) -> Bool {
@@ -373,9 +410,22 @@ final class GameViewModel: GameFlowViewModel {
 
     func handleTap(on targetId: String) {
         guard !finished else { return }
-        Haptics.impact(.soft)
-        removePiece(from: targetId)
+        guard removePiece(from: targetId) else { return }
+        Haptics.impactAfterUIUpdate(.soft)
     }
+
+    func handleTap(at cell: Cell) {
+        guard !finished else { return }
+        guard let targetId = engine.occupiedTargetId(containing: cell) else { return }
+        handleTap(on: targetId)
+    }
+
+#if DEBUG
+    private func seedUITestPlacementIfNeeded() {
+        guard SecurityPolicy.shouldSeedDiagoneUITestPiece else { return }
+        _ = handleDrop(pieceId: "p1", onto: "d_len1_a")
+    }
+#endif
 
     // MARK: - Keyboard Input
 

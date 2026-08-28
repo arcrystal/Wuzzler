@@ -52,6 +52,11 @@ fileprivate enum PuzzleLibrary {
     /// Loads a JSON dictionary mapping "MM/DD/YYYY" -> [six words].
     /// Supports bundled subdirectory + filename (default: Puzzles/puzzles.json).
     static func load(resource: String = "puzzles", subdirectory: String = "Puzzles") -> [String:[String]]? {
+        if let remote = PuzzleContentService.shared.diagoneMap(), !remote.isEmpty {
+            cache = remote
+            cacheLoaded = true
+            return remote
+        }
         if cacheLoaded { return cache }
         let result = _load(resource: resource, subdirectory: subdirectory)
         cache = result
@@ -319,9 +324,7 @@ public final class GameEngine: ObservableObject {
     public convenience init(puzzleDate: Date = Date(),
                              resource: String = "puzzles",
                              subdirectory: String = "Puzzles") {
-        let df = DateFormatter()
-        df.dateFormat = "MM/dd/yyyy"
-        let key = df.string(from: puzzleDate)
+        let key = PuzzleDay.puzzleKey(for: puzzleDate)
 
         guard let library = PuzzleLibrary.load(resource: resource, subdirectory: subdirectory),
               let words = library[key] else {

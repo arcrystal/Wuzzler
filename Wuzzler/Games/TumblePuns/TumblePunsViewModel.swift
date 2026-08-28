@@ -23,10 +23,10 @@ final class TumblePunsViewModel: GameFlowViewModel {
         return lastDelay + 0.50
     }
 
-    init(puzzleDate: Date = Date()) {
+    init(puzzleDate: Date = Date(), countsTowardStats: Bool? = nil) {
         let puzzle = TumblePunsPuzzleLibrary.loadPuzzle(for: puzzleDate)
         self.engine = TumblePunsEngine(puzzle: puzzle)
-        super.init(storageKeyPrefix: "tumblepuns", gameType: .tumblePuns, puzzleDate: puzzleDate)
+        super.init(storageKeyPrefix: "tumblepuns", gameType: .tumblePuns, puzzleDate: puzzleDate, countsTowardStats: countsTowardStats)
 
         // Restore game state if meta indicates we started this puzzle
         if started, let data = loadSavedState(),
@@ -220,6 +220,22 @@ final class TumblePunsViewModel: GameFlowViewModel {
 
     var shadedLetters: String {
         engine.shadedLetters
+    }
+
+    /// The letters currently entered in the shaded cells. This is the letter
+    /// bank shown on the clue stage, whether or not every word is correct yet.
+    var enteredShadedLetters: String {
+        var letters = ""
+        for (index, word) in engine.puzzle.words.enumerated() {
+            let answer = wordAnswers[index]
+            for shadedIndex in word.shadedIndices {
+                let offset = shadedIndex - 1
+                guard offset >= 0, offset < answer.count else { continue }
+                let answerIndex = answer.index(answer.startIndex, offsetBy: offset)
+                letters.append(answer[answerIndex])
+            }
+        }
+        return letters
     }
 
     var puzzle: TumblePunsPuzzle {

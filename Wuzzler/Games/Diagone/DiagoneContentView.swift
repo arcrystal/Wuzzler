@@ -12,38 +12,52 @@ struct DiagoneGameView: View {
 
     var body: some View {
         GeometryReader { geo in
-            let width = geo.size.width
+            let keyboardVisible = viewModel.showMainInput || viewModel.finished
+            let chipPaneVisible = !viewModel.showMainInput && !viewModel.finished
             VStack(spacing: 0) {
                 GameHeader(viewModel: viewModel, gameName: "Diagone", onPause: onPause)
 
-                VStack(spacing: 20) {
-                    // Board
-                    BoardView(highlightRow: highlightedRow)
-                        .environmentObject(viewModel)
-                        .padding(.horizontal)
-                        .frame(maxWidth: .infinity)
-                    // Chip selection pane (hidden when all pieces placed or game finished)
-                    if !viewModel.showMainInput && !viewModel.finished {
-                        chipPane(width: width)
+                GeometryReader { contentGeo in
+                    let layout = layout(
+                        contentSize: contentGeo.size,
+                        safeAreaBottom: geo.safeAreaInsets.bottom,
+                        keyboardVisible: keyboardVisible,
+                        chipPaneVisible: chipPaneVisible
+                    )
+
+                    VStack(spacing: layout.verticalSpacing) {
+                        BoardView(highlightRow: highlightedRow)
+                            .environmentObject(viewModel)
+                            .frame(width: layout.boardSide, height: layout.boardSide)
+                            .padding(.top, layout.topPadding)
+
+                        Spacer(minLength: layout.minimumSpacer)
+
+                        if chipPaneVisible {
+                            chipTray(width: layout.controlWidth, safeAreaBottom: geo.safeAreaInsets.bottom)
+                                .frame(width: layout.controlWidth)
+                                .padding(.bottom, chipTrayScreenGutter(for: layout.controlWidth))
+                                .transition(.move(edge: .bottom).combined(with: .opacity))
+                        }
+
+                        if keyboardVisible {
+                            KeyboardView(
+                                onKeyTap: { key in
+                                    viewModel.typeKey(key)
+                                },
+                                onDelete: {
+                                    viewModel.deleteKey()
+                                }
+                            )
+                            .padding(.horizontal)
+                            .padding(.bottom, max(8, geo.safeAreaInsets.bottom + 4))
+                            .frame(maxWidth: layout.controlWidth)
+                            .opacity(viewModel.finished ? 0.5 : 1.0)
                             .transition(.move(edge: .bottom).combined(with: .opacity))
+                        }
                     }
-                    // Keyboard (shown when all pieces placed, or game finished)
-                    if viewModel.showMainInput || viewModel.finished {
-                        Spacer().frame(maxHeight: 40)
-                        KeyboardView(
-                            onKeyTap: { key in
-                                viewModel.typeKey(key)
-                            },
-                            onDelete: {
-                                viewModel.deleteKey()
-                            }
-                        )
-                        .padding(.horizontal)
-                        .opacity(viewModel.finished ? 0.5 : 1.0)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
-                .padding(.vertical)
                 .animation(.easeInOut(duration: 0.3), value: viewModel.showMainInput)
             }
             .background(Color.boardCell.opacity(0.2).ignoresSafeArea())
@@ -77,9 +91,59 @@ struct DiagoneGameView: View {
 
     // MARK: - Chip Pane Layout
 
+    private struct Layout {
+        let boardSide: CGFloat
+        let controlWidth: CGFloat
+        let topPadding: CGFloat
+        let verticalSpacing: CGFloat
+        let minimumSpacer: CGFloat
+    }
+
+    private func layout(
+        contentSize: CGSize,
+        safeAreaBottom: CGFloat,
+        keyboardVisible: Bool,
+        chipPaneVisible: Bool
+    ) -> Layout {
+        let horizontalPadding = max(16, min(32, contentSize.width * 0.055))
+        let availableControlWidth = max(120, contentSize.width - horizontalPadding * 2)
+        let maxControlWidth: CGFloat = contentSize.width > 700 ? 560 : 620
+        let controlWidth = min(availableControlWidth, maxControlWidth)
+        let availableBoardWidth = max(120, contentSize.width - horizontalPadding * 2)
+        let maxBoardWidth = contentSize.width > 700 ? min(availableBoardWidth, 540) : availableBoardWidth
+        let bottomReserve: CGFloat = {
+            if keyboardVisible {
+                return 166 + safeAreaBottom
+            }
+            if chipPaneVisible {
+                return chipTrayHeight(for: controlWidth, safeAreaBottom: safeAreaBottom)
+                    + chipTrayScreenGutter(for: controlWidth)
+                    + 10
+            }
+            return 0
+        }()
+        let topPadding = max(8, min(18, contentSize.height * 0.025))
+        let availableBoardHeight = max(120, contentSize.height - bottomReserve - topPadding - 18)
+        let boardSide = max(120, min(maxBoardWidth, availableBoardHeight))
+        let verticalSpacing = max(12, min(22, contentSize.height * 0.025))
+        return Layout(
+            boardSide: boardSide,
+            controlWidth: controlWidth,
+            topPadding: topPadding,
+            verticalSpacing: verticalSpacing,
+            minimumSpacer: max(8, verticalSpacing * 0.5)
+        )
+    }
+
     private func chipPaneMargin(for width: CGFloat) -> CGFloat { width * 0.02 }
     private func chipGap(for width: CGFloat) -> CGFloat { width * 0.004 }
     private func chipRowSpacing(for width: CGFloat) -> CGFloat { width * 0.02 }
+    private func chipTrayHorizontalInset(for width: CGFloat) -> CGFloat { max(10, min(18, width * 0.035)) }
+    private func chipTrayTopPadding(for width: CGFloat) -> CGFloat { max(10, min(16, width * 0.03)) }
+    private func chipTrayBottomPadding(for width: CGFloat, safeAreaBottom: CGFloat) -> CGFloat {
+        max(34, min(56, width * 0.095)) + safeAreaBottom
+    }
+    private func chipTrayScreenGutter(for width: CGFloat) -> CGFloat { max(12, min(24, width * 0.03)) }
     private let tileFactor: CGFloat = 0.85
     private let stepFactor: CGFloat = 0.72
 
@@ -130,9 +194,82 @@ struct DiagoneGameView: View {
         return positions
     }
 
+    private func justifiedXPositions(cellSize: CGFloat, gap: CGFloat, rowWidth: CGFloat) -> [CGFloat] {
+        let visualWidth = rowVisualWidth(cellSize: cellSize, gap: gap)
+        let sideInset = max(14, min(26, cellSize * 0.6))
+        let targetWidth = max(visualWidth, rowWidth - sideInset * 2)
+        let extraGap = max(0, (targetWidth - visualWidth) / 4.0)
+        let adjustedGap = gap + extraGap
+        let adjustedWidth = rowVisualWidth(cellSize: cellSize, gap: adjustedGap)
+        // Diagonal chips render down/right from their slot, so center with a little rightward overhang reserved.
+        let renderedRightOverhang = cellSize * 1.35
+        let leadingInset = max(0, (rowWidth - adjustedWidth - renderedRightOverhang) / 2.0)
+        return computeXPositions(cellSize: cellSize, gap: adjustedGap).map { $0 + leadingInset }
+    }
+
+    private func rowVisualWidth(cellSize: CGFloat, gap: CGFloat) -> CGFloat {
+        let xPositions = computeXPositions(cellSize: cellSize, gap: gap)
+        return (1...5).reduce(CGFloat.zero) { width, length in
+            max(width, xPositions[length - 1] + chipSpan(length, cellSize: cellSize))
+        }
+    }
+
     private func chipYOffset(_ length: Int, cellSize: CGFloat, maxSpan: CGFloat) -> CGFloat {
         let span = chipSpan(length, cellSize: cellSize)
         return (maxSpan - span) / 2
+    }
+
+    private func chipTrayHeight(for width: CGFloat, safeAreaBottom: CGFloat) -> CGFloat {
+        let horizontalInset = chipTrayHorizontalInset(for: width)
+        let contentWidth = max(120, width - horizontalInset * 2)
+        return chipPaneHeight(for: contentWidth)
+            + chipTrayTopPadding(for: width)
+            + chipTrayBottomPadding(for: width, safeAreaBottom: safeAreaBottom)
+    }
+
+    private func chipPaneHeight(for width: CGFloat) -> CGFloat {
+        let margin = chipPaneMargin(for: width)
+        let gap = chipGap(for: width)
+        let rowSpacing = chipRowSpacing(for: width)
+        let availableWidth = width - 2 * margin
+        let cellSize = computeCellSize(availableWidth: availableWidth, gap: gap)
+        let maxSpan = chipSpan(5, cellSize: cellSize)
+        return maxSpan * 2 + rowSpacing
+    }
+
+    @ViewBuilder
+    private func chipTray(width: CGFloat, safeAreaBottom: CGFloat) -> some View {
+        let horizontalInset = chipTrayHorizontalInset(for: width)
+        let contentWidth = max(120, width - horizontalInset * 2)
+
+        chipPane(width: contentWidth)
+            .padding(.horizontal, horizontalInset)
+            .padding(.top, chipTrayTopPadding(for: width))
+            .padding(.bottom, chipTrayBottomPadding(for: width, safeAreaBottom: safeAreaBottom))
+            .frame(width: width)
+            .background(
+                GeometryReader { proxy in
+                    let frame = proxy.frame(in: .global)
+                    Color.clear
+                        .onAppear {
+                            viewModel.chipTrayFrameGlobal = frame
+                        }
+                        .onChange(of: frame, initial: true) { _, newFrame in
+                            viewModel.chipTrayFrameGlobal = newFrame
+                        }
+                }
+            )
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(Color(UIColor.systemBackground))
+                    .shadow(color: .black.opacity(0.08), radius: 10, x: 0, y: 4)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(Color.gridLine.opacity(0.55), lineWidth: 1)
+            )
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("diagone-chip-tray")
     }
 
     @ViewBuilder
@@ -142,7 +279,7 @@ struct DiagoneGameView: View {
         let rowSpacing = chipRowSpacing(for: width)
         let availableWidth = width - 2 * margin
         let cellSize = computeCellSize(availableWidth: availableWidth, gap: gap)
-        let xPositions = computeXPositions(cellSize: cellSize, gap: gap)
+        let xPositions = justifiedXPositions(cellSize: cellSize, gap: gap, rowWidth: availableWidth)
         let maxSpan = chipSpan(5, cellSize: cellSize)
 
         let groups = Dictionary(grouping: viewModel.engine.state.pieces, by: \.length)

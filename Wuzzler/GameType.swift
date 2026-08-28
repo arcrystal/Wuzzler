@@ -27,7 +27,7 @@ enum GameType: String, Identifiable, CaseIterable {
         switch self {
         case .diagone: return "Fill the grid then solve the middle diagonal to complete each row"
         case .rhymeAGrams: return "Use each letter once to find four rhyming words"
-        case .tumblePuns: return "Unscramble words then solve the punny definition"
+        case .tumblePuns: return "Unscramble words then solve the punny clue"
         }
     }
 
@@ -36,6 +36,14 @@ enum GameType: String, Identifiable, CaseIterable {
         case .diagone: return .diagoneAccent
         case .rhymeAGrams: return .rhymeAGramsAccent
         case .tumblePuns: return .tumblePunsAccent
+        }
+    }
+
+    var cardColor: Color {
+        switch self {
+        case .diagone: return .diagoneCard
+        case .rhymeAGrams: return .rhymeAGramsCard
+        case .tumblePuns: return .tumblePunsCard
         }
     }
 }
