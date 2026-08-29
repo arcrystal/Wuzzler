@@ -168,7 +168,7 @@ final class GameCenterService: NSObject, ObservableObject {
             GKAccessPoint.shared.isActive = false
             friends = []
             friendsAuthorizationStatus = nil
-            authState = .unauthenticated(error?.localizedDescription ?? "Game Center sign-in is required to play Wuzzler.")
+            authState = .unauthenticated("Game Center is unavailable. You can keep playing as a guest.")
         }
     }
 

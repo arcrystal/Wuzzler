@@ -34,6 +34,7 @@ final class PuzzleLoadingUITests: XCTestCase {
         app.launchArguments += [
             "-WuzzlerUITestAuthenticated",
             "-WuzzlerUITestResetState",
+            "-WuzzlerUITestPuzzleLoadingMinimumDuration", "2.0",
             "-tutorial_seen_diagone", "YES",
             "-tutorial_seen_rhymeagrams", "YES",
             "-tutorial_seen_tumblepuns", "YES",
@@ -53,7 +54,7 @@ final class PuzzleLoadingUITests: XCTestCase {
         playButton.tap()
 
         let loadingBar = app.descendants(matching: .any)["\(accessibilityPrefix)-start-progress"]
-        XCTAssertTrue(loadingBar.exists)
+        XCTAssertTrue(loadingBar.waitForExistence(timeout: 2))
 
         XCTAssertTrue(gameElement(app).waitForExistence(timeout: 6))
     }

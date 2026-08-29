@@ -31,7 +31,7 @@ enum ShareCardBuilder {
         if streakCount > 0 {
             lines.append("\u{1F525} \(streakCount) day streak")
         }
-        lines.append("wuzzler.app")
+        lines.append("https://arcrystal.github.io/Wuzzler/")
         return lines.joined(separator: "\n")
     }
 
@@ -64,7 +64,7 @@ enum ShareCardBuilder {
         if streakCount > 0 {
             lines.append("\u{1F525} \(streakCount) day streak")
         }
-        lines.append("wuzzler.app")
+        lines.append("https://arcrystal.github.io/Wuzzler/")
         return lines.joined(separator: "\n")
     }
 
@@ -115,7 +115,7 @@ enum ShareCardBuilder {
         if streakCount > 0 {
             lines.append("\u{1F525} \(streakCount) day streak")
         }
-        lines.append("wuzzler.app")
+        lines.append("https://arcrystal.github.io/Wuzzler/")
         return lines.joined(separator: "\n")
     }
 

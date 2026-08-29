@@ -56,6 +56,9 @@ struct PuzzlePreparationControl: View {
         progress = 0
 
         loadingTask = Task { @MainActor in
+            let clock = ContinuousClock()
+            let loadingStartedAt = clock.now
+
             // Let the empty bar render before any potentially cold setup begins.
             do {
                 try await Task.sleep(for: .milliseconds(30))
@@ -76,6 +79,18 @@ struct PuzzlePreparationControl: View {
             }
 
             Haptics.prepare()
+
+            if let minimumDuration = SecurityPolicy.uiTestPuzzleLoadingMinimumDuration {
+                let minimum = Duration.milliseconds(Int64((minimumDuration * 1_000).rounded()))
+                let elapsed = loadingStartedAt.duration(to: clock.now)
+                if elapsed < minimum {
+                    do {
+                        try await Task.sleep(for: minimum - elapsed)
+                    } catch {
+                        return
+                    }
+                }
+            }
 
             do {
                 try await Task.sleep(for: .milliseconds(350))

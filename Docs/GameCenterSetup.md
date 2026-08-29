@@ -37,10 +37,12 @@ Settings:
 - `first_solve`: 10 points
 - `first_daily_sweep`: 25 points
 - `streak_7`: 50 points
-- `streak_14`: 100 points
-- `streak_30`: 200 points
+- `streak_14`: 75 points
+- `streak_30`: 100 points
 - Each game-specific first solve: 10 points
 - Use distinct Wuzzler badge artwork for achievements only; do not add artwork to leaderboards.
+
+Before distributing a build, compare every App Store Connect identifier, recurrence setting, score format, and point value above against the live record. Test daily-score submission with two sandbox accounts and verify that archived/practice solves never submit.
 
 ## Content Export
 

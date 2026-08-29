@@ -38,6 +38,19 @@ enum SecurityPolicy {
         #endif
     }
 
+    static var uiTestPuzzleLoadingMinimumDuration: TimeInterval? {
+        #if DEBUG
+        guard let rawValue = launchArgumentValue(after: "-WuzzlerUITestPuzzleLoadingMinimumDuration"),
+              let duration = TimeInterval(rawValue),
+              duration > 0 else {
+            return nil
+        }
+        return duration
+        #else
+        return nil
+        #endif
+    }
+
     static func isApprovedRemoteContentURL(_ url: URL) -> Bool {
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return false }
         guard components.scheme?.lowercased() == "https" else { return false }
@@ -86,6 +99,14 @@ enum SecurityPolicy {
     #if DEBUG
     private static func hasLaunchArgument(_ argument: String) -> Bool {
         ProcessInfo.processInfo.arguments.contains(argument)
+    }
+
+    private static func launchArgumentValue(after argument: String) -> String? {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let argumentIndex = arguments.firstIndex(of: argument) else { return nil }
+        let valueIndex = arguments.index(after: argumentIndex)
+        guard arguments.indices.contains(valueIndex) else { return nil }
+        return arguments[valueIndex]
     }
     #endif
 }

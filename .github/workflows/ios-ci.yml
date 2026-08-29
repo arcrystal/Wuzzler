@@ -4,6 +4,7 @@ on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: ios-ci-${{ github.ref }}
@@ -11,69 +12,74 @@ concurrency:
 
 jobs:
   validate-test-archive:
-    runs-on: macos-26
-    timeout-minutes: 75
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Xcode 26.6 release baseline
+            lane: xcode26-baseline
+            runner: macos-26
+            xcode: '26.6'
+            download_platform: true
+            expected_xcode_build: 17F113
+            expected_sdk: iphoneos26.5
+            advisory: false
+          - name: Xcode 27 preview advisory
+            lane: xcode27-preview
+            runner: xcode-27
+            xcode: default
+            download_platform: false
+            expected_xcode_build: ''
+            expected_sdk: ''
+            advisory: true
+    runs-on: ${{ matrix.runner }}
+    continue-on-error: ${{ matrix.advisory }}
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
-      - uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: '26.6'
-      - name: Install matching iOS Simulator runtime
-        run: |
-          sudo xcodebuild -runFirstLaunch
-          xcodebuild -downloadPlatform iOS
-          simulator_id=$(python3 - <<'PY'
-          import json
-          import subprocess
 
-          payload = json.loads(
-              subprocess.check_output(["xcrun", "simctl", "list", "devices", "available", "-j"])
+      - name: Select Xcode ${{ matrix.xcode }}
+        if: matrix.xcode != 'default'
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: ${{ matrix.xcode }}
+
+      - name: Confirm Xcode 27 preview runner
+        if: matrix.lane == 'xcode27-preview'
+        run: |
+          xcodebuild -version | tee "$RUNNER_TEMP/xcode27-runner-version.log"
+          xcodebuild -version | head -1 | grep -Eq '^Xcode 27([.]|$)'
+
+      - name: Run shared release gate
+        env:
+          WUZZLER_LANE: ${{ matrix.lane }}
+          DOWNLOAD_PLATFORM: ${{ matrix.download_platform }}
+          EXPECTED_XCODE_BUILD: ${{ matrix.expected_xcode_build }}
+          EXPECTED_SDK: ${{ matrix.expected_sdk }}
+        run: |
+          arguments=(
+            --lane "$WUZZLER_LANE"
+            --output-dir "$RUNNER_TEMP/release-gate-$WUZZLER_LANE"
           )
-          candidates = [
-              device["udid"]
-              for devices in payload["devices"].values()
-              for device in devices
-              if device.get("isAvailable") and device.get("name", "").startswith("iPhone")
-          ]
-          if not candidates:
-              raise SystemExit("No available iPhone Simulator after runtime installation")
-          print(candidates[0])
-          PY
-          )
-          echo "WUZ_SIMULATOR_ID=$simulator_id" >> "$GITHUB_ENV"
-      - name: Validate puzzle coverage
-        run: |
-          python3 -m unittest discover -s Scripts/tests
-          Scripts/validate_puzzles.py --minimum-future-days 30
-      - name: Run tests
-        run: |
-          set -o pipefail
-          xcodebuild test \
-            -project Wuzzler.xcodeproj \
-            -scheme Wuzzler \
-            -destination "platform=iOS Simulator,id=$WUZ_SIMULATOR_ID" \
-            -resultBundlePath "$RUNNER_TEMP/WuzzlerTests.xcresult" \
-            | tee "$RUNNER_TEMP/test.log"
-      - name: Build unsigned Release archive
-        run: |
-          set -o pipefail
-          xcodebuild archive \
-            -project Wuzzler.xcodeproj \
-            -scheme Wuzzler \
-            -configuration Release \
-            -destination 'generic/platform=iOS' \
-            -archivePath "$RUNNER_TEMP/Wuzzler.xcarchive" \
-            CODE_SIGNING_ALLOWED=NO \
-            | tee "$RUNNER_TEMP/archive.log"
-      - name: Audit archive
-        run: Scripts/audit_release_archive.sh "$RUNNER_TEMP/Wuzzler.xcarchive"
+          if [[ "$DOWNLOAD_PLATFORM" == "true" ]]; then
+            arguments+=(--download-platform)
+          fi
+          if [[ -n "$EXPECTED_XCODE_BUILD" ]]; then
+            arguments+=(--expected-xcode-build "$EXPECTED_XCODE_BUILD")
+          fi
+          if [[ -n "$EXPECTED_SDK" ]]; then
+            arguments+=(--expected-sdk "$EXPECTED_SDK")
+          fi
+          Scripts/run_release_gate.sh "${arguments[@]}"
+
       - name: Upload diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ios-release-gate-${{ github.run_number }}
+          name: ios-release-gate-${{ matrix.lane }}-${{ github.run_number }}
           path: |
-            ${{ runner.temp }}/WuzzlerTests.xcresult
-            ${{ runner.temp }}/test.log
-            ${{ runner.temp }}/archive.log
+            ${{ runner.temp }}/xcode27-runner-version.log
+            ${{ runner.temp }}/release-gate-${{ matrix.lane }}/*.log
+            ${{ runner.temp }}/release-gate-${{ matrix.lane }}/*.xcresult
           if-no-files-found: ignore
