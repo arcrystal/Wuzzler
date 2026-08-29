@@ -41,6 +41,10 @@ final class PuzzleLoadingUITests: XCTestCase {
         ]
         app.launch()
 
+        let playTab = app.descendants(matching: .any)["main-tab-play"]
+        XCTAssertTrue(playTab.waitForExistence(timeout: 8))
+        playTab.tap()
+
         let card = app.descendants(matching: .any)[cardIdentifier]
         XCTAssertTrue(card.waitForExistence(timeout: 8))
         if !card.isHittable {
