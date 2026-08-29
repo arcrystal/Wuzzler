@@ -37,7 +37,7 @@ jobs:
     continue-on-error: ${{ matrix.advisory }}
     timeout-minutes: 90
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Select Xcode ${{ matrix.xcode }}
         if: matrix.xcode != 'default'
@@ -75,7 +75,7 @@ jobs:
 
       - name: Upload diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ios-release-gate-${{ matrix.lane }}-${{ github.run_number }}
           path: |

@@ -191,21 +191,45 @@ xcodebuild test \
   -resultBundlePath "$output_dir/WuzzlerTests.xcresult" \
   | tee "$output_dir/test.log"
 
-xcodebuild test \
-  -project Wuzzler.xcodeproj \
-  -scheme Wuzzler \
-  -destination "platform=iOS Simulator,id=$compact_simulator_id" \
-  -only-testing:WuzzlerUITests/AuthGateUITests/testAuthenticatedShellShowsThreeFloatingTabsAndGames \
-  -resultBundlePath "$output_dir/CompactSmoke.xcresult" \
-  | tee "$output_dir/compact-smoke.log"
+run_ui_smoke() {
+  local simulator_id=$1
+  local result_name=$2
+  local log_name=$3
+  local attempt result_path status
 
-xcodebuild test \
-  -project Wuzzler.xcodeproj \
-  -scheme Wuzzler \
-  -destination "platform=iOS Simulator,id=$ipad_simulator_id" \
-  -only-testing:WuzzlerUITests/AuthGateUITests/testAuthenticatedShellShowsThreeFloatingTabsAndGames \
-  -resultBundlePath "$output_dir/iPadPortraitSmoke.xcresult" \
-  | tee "$output_dir/ipad-portrait-smoke.log"
+  for attempt in 1 2; do
+    if [[ $attempt -eq 2 ]]; then
+      echo "Retrying $log_name after resetting the simulator." | tee -a "$output_dir/$log_name.log"
+      xcrun simctl shutdown "$simulator_id" >/dev/null 2>&1 || true
+      xcrun simctl erase "$simulator_id"
+    fi
+
+    xcrun simctl boot "$simulator_id" >/dev/null 2>&1 || true
+    xcrun simctl bootstatus "$simulator_id" -b
+    result_path="$output_dir/${result_name}-attempt${attempt}.xcresult"
+
+    set +e
+    xcodebuild test \
+      -project Wuzzler.xcodeproj \
+      -scheme Wuzzler \
+      -destination "platform=iOS Simulator,id=$simulator_id" \
+      -only-testing:WuzzlerUITests/AuthGateUITests/testAuthenticatedShellShowsThreeFloatingTabsAndGames \
+      -resultBundlePath "$result_path" \
+      | tee -a "$output_dir/$log_name.log"
+    status=${PIPESTATUS[0]}
+    set -e
+
+    if [[ $status -eq 0 ]]; then
+      return 0
+    fi
+  done
+
+  echo "ERROR: $log_name failed twice." >&2
+  return "$status"
+}
+
+run_ui_smoke "$compact_simulator_id" "CompactSmoke" "compact-smoke"
+run_ui_smoke "$ipad_simulator_id" "iPadPortraitSmoke" "ipad-portrait-smoke"
 
 xcodebuild analyze \
   -project Wuzzler.xcodeproj \

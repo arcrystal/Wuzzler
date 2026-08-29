@@ -9,6 +9,6 @@ jobs:
   validate-endpoint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Validate published manifest
         run: Scripts/check_content_endpoint.py --minimum-future-days 30
