@@ -9,36 +9,36 @@
 5. Complete the age-rating and App Privacy questionnaires. No account is required; Game Center is optional; there is no chat, advertising, purchasing, tracking, or unrestricted web browsing.
 6. Create an internal TestFlight group named **Release QA**. After its first processed build, create the external **Public Beta** group with iOS 17+ criteria and a public-link limit of 100.
 
-## 2. Prepare Xcode 27 beta 6 and signing
+## 2. Prepare Xcode 27.0 and signing
 
-1. Use Xcode 27 beta 6 (`27A5252f`) for preview testing. Keep the app deployment target at iOS 17 and Swift language mode at Swift 5.
-2. Leave the global Command Line Tools selection unchanged. Run beta-specific commands with an explicit developer directory and verify the exact build:
+1. Use Xcode 27.0 (`27A266a`) for local release validation. Keep the app deployment target at iOS 17 and Swift language mode at Swift 5.
+2. Leave the global Command Line Tools selection unchanged. Run release-toolchain commands with an explicit developer directory and verify the exact build:
 
    ```sh
-   DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer \
+   DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
      xcodebuild -version
    ```
 
-   The reported build must be `27A5252f`. Launch `/Applications/Xcode-beta.app` directly for interactive beta work; do not use `sudo xcode-select` to make it the system-wide default.
+   The reported build must be `27A266a`. Launch `/Applications/Xcode.app` directly for interactive release work; do not use `sudo xcode-select` to make it the system-wide default.
 3. Sign in to the Apple developer account for team `VD6A5NU7DP`. Replace any expired development identity, create or obtain an Apple Distribution identity, and let automatic signing create or select profiles for `CotterCrystal.Wuzzler` with Game Center.
 4. Confirm Xcode can run Wuzzler on a physical device before preparing a candidate. The project must not be migrated to an iOS 27 deployment target or Swift 6 merely because it is opened in Xcode 27.
 
 ## 3. Keep both automated toolchain lanes healthy
 
 - The required **Xcode 26.6 release baseline** runs all content tests, iOS tests, an unsigned Release archive, and archive inspection.
-- The **Xcode 27 preview advisory** runs the same shared gate on GitHub's current `xcode-27` image and records its actual Xcode/SDK versions. GitHub may publish a preview image later than Apple, so a local beta 6 gate is required even when the advisory lane is green.
+- The **Xcode 27 preview advisory** runs the same shared gate on GitHub's current `xcode-27` image and records its actual Xcode/SDK versions. The hosted image may differ from the installed stable toolchain, so a local Xcode 27.0 gate is required even when the advisory lane is green.
 - Run the exact local gate before distributing a beta:
 
   ```sh
-  DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer \
+  DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
     Scripts/run_release_gate.sh \
-      --lane xcode27-beta6-local \
-      --output-dir /tmp/Wuzzler-xcode27-beta6-gate \
-      --expected-xcode-build 27A5252f \
+      --lane xcode27-stable-local \
+      --output-dir /tmp/Wuzzler-xcode27-stable-gate \
+      --expected-xcode-build 27A266a \
       --expected-sdk iphoneos27.0
   ```
 
-- Do not distribute while the required Xcode 26.6 lane or the local Xcode 27 beta 6 gate is failing. Treat a preview CI failure as a compatibility issue to investigate even though it is advisory in branch protection.
+- Do not distribute while the required Xcode 26.6 lane or the local Xcode 27.0 gate is failing. Treat a preview CI failure as a compatibility issue to investigate even though it is advisory in branch protection.
 
 ## 4. Prepare an immutable candidate
 
@@ -51,26 +51,26 @@
    ```
 
 4. Review and commit the build-number change. If the selected build was already committed, use the existing clean commit.
-5. Re-run the Xcode 26.6 workflow and the local Xcode 27 beta 6 gate on that exact commit.
+5. Re-run the Xcode 26.6 workflow and the local Xcode 27.0 gate on that exact commit.
 6. Tag only the passing commit as `testflight/1.0.<build-number>` and push the commit and tag. Never move or reuse a TestFlight tag.
 
 ## 5. Sign, inspect, and distribute
 
 ### Preferred: Xcode Cloud
 
-1. Create a workflow named **TestFlight Beta** for the `main` branch. Select Xcode 27 beta 6 exactly when Xcode Cloud offers it; if it does not, keep Xcode Cloud distribution disabled and use the exact local beta 6 archive path below. Use the Wuzzler scheme, an iOS archive action, Apple-managed signing, and TestFlight distribution to the internal **Release QA** group.
+1. Create a workflow named **TestFlight Beta** for the `main` branch. Select Xcode 27.0 (`27A266a`) exactly when Xcode Cloud offers it; if it does not, keep Xcode Cloud distribution disabled and use the exact local Xcode 27.0 archive path below. Use the Wuzzler scheme, an iOS archive action, Apple-managed signing, and TestFlight distribution to the internal **Release QA** group.
 2. Start the workflow manually from the exact tagged commit. Do not enable a TestFlight-internal-only restriction if the same build will later go to external testers.
 3. Confirm the processed App Store Connect build reports the committed version/build, iOS 17 minimum, expected Xcode/SDK, Game Center capability, privacy manifest, and dSYM. A mismatch is a failed candidate; do not retag or reuse its number.
 
 ### Fallback: local Organizer upload
 
-1. Open `/Applications/Xcode-beta.app`, select **Any iOS Device (arm64)**, and choose Product → Archive.
+1. Open `/Applications/Xcode.app`, select **Any iOS Device (arm64)**, and choose Product → Archive.
 2. Inspect the signed archive before distribution, substituting the selected build number:
 
    ```sh
    Scripts/audit_release_archive.sh /path/to/Wuzzler.xcarchive \
      --expected-build <build-number> \
-     --expected-xcode-build 27A5252f \
+     --expected-xcode-build 27A266a \
      --expected-sdk iphoneos27.0 \
      --require-signed
    ```
@@ -89,13 +89,29 @@
    - Review notes: “No account is required. All puzzles can be played as a guest. Game Center is optional and is used only for friends, leaderboards, and achievements.”
 5. Submit the first external build for Beta App Review and enable automatic tester notification after approval. Release only when no blocker/high-severity issue remains and the public link installs successfully.
 
-## 7. Cut over to stable Xcode 27
+## 7. Complete the hosted Xcode 27 transition
 
-1. When Apple releases Xcode 27 RC/final and App Store Connect accepts that toolchain, pin the local and Xcode Cloud release workflows to it. Do not submit a beta-built binary as the App Store release.
-2. Add a temporary required GitHub lane pinned to exact Xcode 27 stable. Run it alongside Xcode 26.6 and the preview lane once.
-3. Increment to a new unused build number, rebuild from the intended clean source commit with stable Xcode 27, repeat automated and physical-device QA, then upload a new candidate.
-4. After the stable Xcode 27 lane and signed archive pass, replace the Xcode 26.6 baseline with stable Xcode 27 and remove the preview lane. Keep iOS 17 and Swift 5 until a separate compatibility decision changes them.
-5. Update this runbook with the exact stable Xcode build and SDK recorded in the accepted archive.
+1. The locally installed release toolchain is Xcode 27.0 (`27A266a`) with `iphoneos27.0`. Confirm App Store Connect accepts the selected toolchain before distribution.
+2. Keep the existing required Xcode 26.6 baseline until GitHub offers the exact stable toolchain. The `xcode-27` advisory image is not proof that the release build is installed; inspect its recorded version. Check [GitHub's runner inventory](https://github.com/actions/runner-images) before changing the runner or toolchain pin.
+3. Once available, add a required Xcode 27.0 lane pinned to `27A266a` and `iphoneos27.0`, and run it alongside the existing baseline once.
+4. After the stable lane and signed archive pass, replace the Xcode 26.6 baseline and remove the preview lane. Update branch protection to require the new job before removing the old required job.
+5. Keep iOS 17 and Swift 5. A newer compiler alone does not require raising the minimum OS or changing Swift language mode.
+
+## Content replenishment
+
+The daily health check requires a puzzle for today and every day through 30 days ahead, in UTC. A green result expires as the calendar advances. Add reviewed puzzles regularly; do not lower the threshold or repeat old puzzles just to turn the check green.
+
+The schedule was reset to start September 20, 2026, preserving the original puzzle order and content:
+
+| Game | Puzzles | Last scheduled puzzle | Replenish before |
+| --- | --- | --- | --- |
+| Diagone | 70 | November 28, 2026 | October 30, 2026 |
+| TumblePun | 80 | December 8, 2026 | November 9, 2026 |
+| RhymeAGram | 121 | January 18, 2027 | December 20, 2026 |
+
+This is a prelaunch schedule reset. Existing tester progress and Game Center scores are keyed by date, so use a fresh installation for candidate QA; historical scores do not move with puzzle content. Publish the rescheduled manifest before testing the new binary online, because cached/remote entries override bundled entries for the same date.
+
+Edit the corresponding JSON under `Wuzzler/Games/<game>/Puzzles/`, run `Scripts/validate_puzzles.py --minimum-future-days 30`, and merge the reviewed content. The Pages workflow generates and publishes the remote manifest. Then run `Scripts/check_content_endpoint.py --minimum-future-days 30` to verify the live deployment. Bundled content changes also require a new binary for offline availability on fresh installs.
 
 ## Rollback and expiration
 

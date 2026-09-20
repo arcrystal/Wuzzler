@@ -18,7 +18,7 @@ final class PuzzleDayTests: XCTestCase {
     }
 
     func testBundledLaunchDateContentExistsForEveryGame() throws {
-        let launchDate = try XCTUnwrap(PuzzleDay.date(fromStorageKey: "2026-08-07"))
+        let launchDate = try XCTUnwrap(PuzzleDay.date(fromStorageKey: "2026-09-20"))
 
         for game in GameType.allCases {
             XCTAssertTrue(PuzzleContentService.shared.hasPuzzle(for: game, on: launchDate), "\(game.displayName) is missing launch-date content")

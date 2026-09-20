@@ -37,7 +37,10 @@ final class PuzzleContentService {
         self.cacheFileURL = cacheURL ?? Self.defaultCacheURL
         self.bundledManifest = Self.loadBundledManifest()
 
-        guard let manifest = Self.loadManifest(from: cacheFileURL) else { return }
+        // Reset-mode UI tests exercise this build's bundled schedule, independent
+        // of a previous run's cache or the currently published content.
+        guard !SecurityPolicy.shouldResetUITestState,
+              let manifest = Self.loadManifest(from: cacheFileURL) else { return }
         let failures = Self.validationFailures(in: manifest)
         if failures.isEmpty {
             cachedManifest = manifest
@@ -47,6 +50,7 @@ final class PuzzleContentService {
     }
 
     func refresh() async {
+        guard !SecurityPolicy.shouldResetUITestState else { return }
         guard SecurityPolicy.isApprovedRemoteContentURL(Self.remoteURL) else {
             recordValidationFailure("Remote puzzle content URL is not approved.")
             return

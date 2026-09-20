@@ -60,7 +60,7 @@ final class PuzzleContentValidationTests: XCTestCase {
 
     func testServiceUsesBundledManifestWhenRemoteCacheIsEmpty() throws {
         let service = PuzzleContentService(cacheURL: temporaryCacheURL())
-        let launchDate = try XCTUnwrap(PuzzleDay.date(fromStorageKey: "2026-08-07"))
+        let launchDate = try XCTUnwrap(PuzzleDay.date(fromStorageKey: "2026-09-20"))
 
         for game in GameType.allCases {
             XCTAssertTrue(service.hasPuzzle(for: game, on: launchDate), "\(game.displayName) is missing bundled launch-date content")
@@ -86,9 +86,9 @@ final class PuzzleContentValidationTests: XCTestCase {
         let manifest = try XCTUnwrap(service.manifest())
 
         XCTAssertNotNil(manifest.diagone[remoteOnlyKey])
-        XCTAssertNotNil(manifest.diagone["08/07/2026"])
-        XCTAssertNotNil(manifest.rhymeagrams["08/07/2026"])
-        XCTAssertNotNil(manifest.tumblepuns["08/07/2026"])
+        XCTAssertNotNil(manifest.diagone["09/20/2026"])
+        XCTAssertNotNil(manifest.rhymeagrams["09/20/2026"])
+        XCTAssertNotNil(manifest.tumblepuns["09/20/2026"])
     }
 
     func testValidRemoteManifestIsCachedAndMerged() async throws {

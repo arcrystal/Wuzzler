@@ -81,8 +81,8 @@ if [[ "$download_platform" == true ]]; then
   xcodebuild -downloadPlatform iOS | tee "$output_dir/platform-download.log"
 fi
 
-python3 -m unittest discover -s Scripts/tests | tee "$output_dir/content-tests.log"
-Scripts/validate_puzzles.py --minimum-future-days 30 | tee "$output_dir/content-validation.log"
+python3 -m unittest discover -s Scripts/tests 2>&1 | tee "$output_dir/content-tests.log"
+Scripts/validate_puzzles.py --minimum-future-days 30 2>&1 | tee "$output_dir/content-validation.log"
 
 simulator_specs=$(python3 <<'PY'
 import json
@@ -163,18 +163,19 @@ while IFS='|' read -r role runtime_id device_type_id runtime_version device_name
 done <<< "$simulator_specs"
 
 simulator_ids=()
-primary_simulator_id=$(xcrun simctl create "Wuzzler-CI-${lane}-primary" "$primary_device_type_id" "$primary_runtime_id")
-simulator_ids+=("$primary_simulator_id")
-compact_simulator_id=$(xcrun simctl create "Wuzzler-CI-${lane}-compact" "$compact_device_type_id" "$compact_runtime_id")
-simulator_ids+=("$compact_simulator_id")
-ipad_simulator_id=$(xcrun simctl create "Wuzzler-CI-${lane}-ipad" "$ipad_device_type_id" "$ipad_runtime_id")
-simulator_ids+=("$ipad_simulator_id")
 cleanup() {
   for simulator_id in "${simulator_ids[@]}"; do
     xcrun simctl delete "$simulator_id" >/dev/null 2>&1 || true
   done
 }
 trap cleanup EXIT
+primary_simulator_id=$(xcrun simctl create "Wuzzler-CI-${lane}-primary" "$primary_device_type_id" "$primary_runtime_id")
+simulator_ids+=("$primary_simulator_id")
+compact_simulator_id=$(xcrun simctl create "Wuzzler-CI-${lane}-compact" "$compact_device_type_id" "$compact_runtime_id")
+simulator_ids+=("$compact_simulator_id")
+ipad_simulator_id=$(xcrun simctl create "Wuzzler-CI-${lane}-ipad" "$ipad_device_type_id" "$ipad_runtime_id")
+simulator_ids+=("$ipad_simulator_id")
+
 {
   echo "Primary simulator: $primary_description, $primary_simulator_id"
   echo "Compact smoke simulator: $compact_description, $compact_simulator_id"
@@ -184,10 +185,16 @@ trap cleanup EXIT
 xcodebuild -project Wuzzler.xcodeproj -scheme Wuzzler -configuration Release -showBuildSettings \
   > "$output_dir/release-build-settings.log"
 
+# Boot the requested device explicitly and avoid parallel runner clones, which
+# can stall at debugger attachment on a fresh Xcode 27 simulator.
+xcrun simctl boot "$primary_simulator_id"
+xcrun simctl bootstatus "$primary_simulator_id" -b
+
 xcodebuild test \
   -project Wuzzler.xcodeproj \
   -scheme Wuzzler \
   -destination "platform=iOS Simulator,id=$primary_simulator_id" \
+  -parallel-testing-enabled NO \
   -resultBundlePath "$output_dir/WuzzlerTests.xcresult" \
   | tee "$output_dir/test.log"
 
@@ -213,6 +220,7 @@ run_ui_smoke() {
       -project Wuzzler.xcodeproj \
       -scheme Wuzzler \
       -destination "platform=iOS Simulator,id=$simulator_id" \
+      -parallel-testing-enabled NO \
       -only-testing:WuzzlerUITests/AuthGateUITests/testAuthenticatedShellShowsThreeFloatingTabsAndGames \
       -resultBundlePath "$result_path" \
       | tee -a "$output_dir/$log_name.log"

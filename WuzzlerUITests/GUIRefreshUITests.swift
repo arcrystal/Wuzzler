@@ -1,7 +1,7 @@
 import XCTest
 
 final class GUIRefreshUITests: XCTestCase {
-    func testPlayCardsArchiveAndPracticeReturnFlow() {
+    func testPlayCardsArchiveAndReturnFlow() {
         let app = XCUIApplication()
         app.launchArguments += [
             "-WuzzlerUITestAuthenticated",
@@ -25,8 +25,9 @@ final class GUIRefreshUITests: XCTestCase {
         XCTAssertTrue(element("archive-game-rhymeAGrams", in: app).exists)
         XCTAssertTrue(element("archive-game-tumblePuns", in: app).exists)
 
-        let yesterday = Self.utcDayKey(daysFromToday: -1)
-        let archivedDate = element("archive-date-\(yesterday)", in: app)
+        // The archive includes today, even on launch day when no past puzzle exists.
+        let today = Self.utcDayKey(daysFromToday: 0)
+        let archivedDate = element("archive-date-\(today)", in: app)
         XCTAssertTrue(archivedDate.waitForExistence(timeout: 2))
         XCTAssertTrue(archivedDate.isEnabled)
         archivedDate.tap()
@@ -37,7 +38,7 @@ final class GUIRefreshUITests: XCTestCase {
 
         XCTAssertTrue(element("archive-screen", in: app).waitForExistence(timeout: 3))
         XCTAssertTrue(element("archive-game-diagone", in: app).isSelected)
-        XCTAssertTrue(element("archive-date-\(yesterday)", in: app).exists)
+        XCTAssertTrue(element("archive-date-\(today)", in: app).exists)
     }
 
     func testFriendsControlsRemainTextBasedAndSelectable() {

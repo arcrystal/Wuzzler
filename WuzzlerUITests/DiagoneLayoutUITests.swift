@@ -47,7 +47,8 @@ final class DiagoneLayoutUITests: XCTestCase {
         let resumeButton = app.buttons["Resume"]
         if playButton.waitForExistence(timeout: 3) {
             playButton.tap()
-            XCTAssertTrue(app.progressIndicators["diagone-start-progress"].exists)
+            // Loading can finish before XCTest returns from tap(). The dedicated
+            // PuzzleLoadingUITests cover that transient state; wait for the board here.
         } else if resumeButton.waitForExistence(timeout: 3) {
             resumeButton.tap()
         } else {
